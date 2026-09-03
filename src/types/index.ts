@@ -26,3 +26,29 @@ export interface Brand {
   tagline: string;
   image: string;
 }
+
+export interface Product {
+  id: string | number;
+  name: string;
+  price: string | number;
+  image: string;
+}
+
+export interface Store {
+  id: string | number;
+  name: string;
+  tagline: string;
+  coverImage: string;
+  products: Product[];
+}
+
+export interface Floor {
+  id: string;
+  title: string;
+  stores: Store[];
+}
+
+export interface MallInteriorData {
+  mallId: string | number;
+  floors: Floor[];
+}
