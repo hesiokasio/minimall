@@ -21,23 +21,22 @@ export default function FloorSection({ floor }: FloorSectionProps) {
 
   return (
     <section 
-      id={`floor-${floor.id}`} 
       ref={containerRef}
-      // تغییر رنگ پس‌زمینه و کاهش پدینگ عمودی برای تراکم بیشتر
-      className="relative w-full bg-[#f4f3f0] pt-16 pb-12 overflow-hidden border-t border-black/5"
+      className="relative w-full bg-[#f4f3f0] pt-4 pb-16 overflow-hidden"
     >
       
+      {/* تایپوگرافی محو در پس‌زمینه طبقه */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
         <motion.h2 
           style={{ y: yText }}
-          // تغییر رنگ تایپوگرافی پس‌زمینه به مشکی بسیار محو
           className="text-[10rem] md:text-[18rem] font-bold text-black/[0.03] whitespace-nowrap tracking-tighter select-none"
         >
-          {floor.id} {floor.title}
+          {floor.title}
         </motion.h2>
       </div>
 
-      <div className="relative z-10 flex flex-col">
+      {/* رندر کردن محصولات */}
+      <div className="relative z-10 flex flex-col gap-6 md:gap-10">
         {floor.stores.map((store) => (
           <StoreRow key={store.id} store={store} />
         ))}
