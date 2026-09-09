@@ -1,4 +1,32 @@
-import { Mall, Product, Brand, MallInteriorData, Store } from '../types';
+// src/data/mockData.ts
+
+import { DirectoryMall, Mall, Product, Brand, MallInteriorData, Store } from '../types';
+
+// ============================================================================
+// بخش اول: دیتاهای صفحه اصلی (HOME PAGE - DIRECTORY)
+// ============================================================================
+
+export const CITIES = ['ALL', 'Tehran', 'Dubai', 'Milan', 'Berlin', 'Tokyo'];
+export const NEIGHBORHOODS = ['ALL', 'Zone 1', 'Sector B', 'Core', 'West Wing', 'District 9'];
+export const CATEGORIES = ['ALL', 'INDUSTRIAL', 'FASHION', 'TECH', 'LIFESTYLE'];
+
+export const MALL_DIRECTORY: DirectoryMall[] = [
+  { id: '1', title: 'AURA DISTRICT', category: 'FASHION', city: 'Tehran', neighborhood: 'Zone 1', stores: 12, products: 450, image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=400&auto=format&fit=crop' },
+  { id: '2', title: 'THE MONOLITH', category: 'INDUSTRIAL', city: 'Dubai', neighborhood: 'Sector B', stores: 8, products: 1200, image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=400&auto=format&fit=crop' },
+  { id: '3', title: 'LUMINA SPACE', category: 'TECH', city: 'Milan', neighborhood: 'Core', stores: 24, products: 890, image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=400&auto=format&fit=crop' },
+  { id: '4', title: 'ECHO PAVILION', category: 'LIFESTYLE', city: 'Berlin', neighborhood: 'West Wing', stores: 5, products: 210, image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=400&auto=format&fit=crop' },
+  { id: '5', title: 'VELVET ROOM', category: 'FASHION', city: 'Tehran', neighborhood: 'Zone 1', stores: 15, products: 340, image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=400&auto=format&fit=crop' },
+  { id: '6', title: 'NEXUS HUB', category: 'TECH', city: 'Dubai', neighborhood: 'Sector B', stores: 19, products: 560, image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop' },
+  { id: '7', title: 'ECLIPSE PLAZA', category: 'LIFESTYLE', city: 'Milan', neighborhood: 'Core', stores: 32, products: 4000, image: 'https://images.unsplash.com/photo-1519642918688-7e43b19245d8?q=80&w=400&auto=format&fit=crop' },
+  { id: '8', title: 'KASEJ ATELIER', category: 'FASHION', city: 'Berlin', neighborhood: 'West Wing', stores: 3, products: 85, image: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?q=80&w=400&auto=format&fit=crop' },
+  { id: '9', title: 'CEMENTO CORE', category: 'INDUSTRIAL', city: 'Dubai', neighborhood: 'Sector B', stores: 7, products: 310, image: 'https://images.unsplash.com/photo-1504307651254-35680f356f12?q=80&w=400&auto=format&fit=crop' },
+  { id: '10', title: 'SILICON WING', category: 'TECH', city: 'Tehran', neighborhood: 'Zone 1', stores: 14, products: 920, image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&auto=format&fit=crop' },
+];
+
+
+// ============================================================================
+// بخش دوم: دیتاهای صفحات داخلی مال (INTERIOR PAGES)
+// ============================================================================
 
 export const SPATIAL_MALLS: Mall[] = [
   { id: 1, title: 'Aura District', subtitle: 'Avant-Garde & High Fashion', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop' },
@@ -16,40 +44,24 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const FEATURED_BRANDS: Brand[] = [
-  { 
-    id: 1, 
-    name: 'Promer', 
-    tagline: 'Industrial Grade Architecture & Materials', 
-    image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=2070&auto=format&fit=crop' 
-  },
-  { 
-    id: 2, 
-    name: 'Lumina', 
-    tagline: 'Minimalist Lighting Concepts', 
-    image: 'https://images.unsplash.com/photo-1565814329452-e1efa11c5e8d?q=80&w=2070&auto=format&fit=crop' 
-  },
-  { 
-    id: 3, 
-    name: 'Aura', 
-    tagline: 'Avant-Garde Apparel', 
-    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop' 
-  }
+  { id: 1, name: 'Promer', tagline: 'Industrial Grade Architecture & Materials', image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=2070&auto=format&fit=crop' },
+  { id: 2, name: 'Lumina', tagline: 'Minimalist Lighting Concepts', image: 'https://images.unsplash.com/photo-1565814329452-e1efa11c5e8d?q=80&w=2070&auto=format&fit=crop' },
+  { id: 3, name: 'Aura', tagline: 'Avant-Garde Apparel', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop' }
 ];
 
-
-// گالری عکس‌های لباس برای محصولات (۸ عکس مینیمال و شیک)
+// گالری عکس‌های لباس برای محصولات
 const CLOTHING_IMAGES = [
-  'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=2000&auto=format&fit=crop', // T-shirt
-  'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=2000&auto=format&fit=crop', // Denim Jacket
-  'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?q=80&w=2000&auto=format&fit=crop', // Minimal Dress
-  'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=2000&auto=format&fit=crop', // Fashion Look
-  'https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=2000&auto=format&fit=crop', // Menswear Suit
-  'https://images.unsplash.com/photo-1584273143981-41c073dfe8f8?q=80&w=2000&auto=format&fit=crop', // Winter Coat
-  'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=2000&auto=format&fit=crop', // Leather Jacket
-  'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?q=80&w=2000&auto=format&fit=crop', // Silk Dress
+  'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1584273143981-41c073dfe8f8?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=2000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?q=80&w=2000&auto=format&fit=crop',
 ];
 
-// گالری عکس‌های کاور برای فروشگاه‌ها (۶ کاور جذاب)
+// گالری عکس‌های کاور برای فروشگاه‌ها
 const STORE_COVERS = [
   'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=2000&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2000&auto=format&fit=crop',
@@ -59,31 +71,26 @@ const STORE_COVERS = [
   'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=2000&auto=format&fit=crop',
 ];
 
-// تابع جادویی شماره ۱: تولید ۸ لباس برای هر فروشگاه
 const generateClothingProducts = (storeId: string): Product[] => {
   return Array.from({ length: 8 }).map((_, index) => ({
     id: `prod-${storeId}-${index}`,
     name: `Editorial Piece ${String(index + 1).padStart(2, '0')}`,
-    price: `$${Math.floor(Math.random() * 600) + 150}`, // قیمت تصادفی بین ۱۵۰ تا ۷۵۰ دلار
+    price: `$${Math.floor(Math.random() * 600) + 150}`,
     image: CLOTHING_IMAGES[index],
   }));
 };
 
-// تابع جادویی شماره ۲: تولید ۶ فروشگاه برای هر طبقه
 const generateStores = (floorPrefix: string, storeCount: number): Store[] => {
   const brandNames = ['Aura', 'Lumina', 'Maison', 'Kasej', 'Vanguard', 'Eclipse'];
-  
   return Array.from({ length: storeCount }).map((_, index) => ({
     id: `store-${floorPrefix}-${index}`,
     name: brandNames[index % brandNames.length],
     tagline: 'Ready To Wear Collection',
     coverImage: STORE_COVERS[index % STORE_COVERS.length],
-    products: generateClothingProducts(`store-${floorPrefix}-${index}`), // تخصیص ۸ لباس به این فروشگاه
+    products: generateClothingProducts(`store-${floorPrefix}-${index}`),
   }));
 };
 
-
-// دیتای نهایی که به صفحه‌ی ما تزریق می‌شود
 export const MALL_INTERIORS: MallInteriorData[] = [
   {
     mallId: 1,
@@ -91,14 +98,12 @@ export const MALL_INTERIORS: MallInteriorData[] = [
       {
         id: 'L1',
         title: 'SARTORIAL DETAILS',
-        // ساخت ۶ فروشگاه (هرکدام با ۸ لباس) با یک خط کد!
         stores: generateStores('L1', 6),
       },
       {
         id: 'L2',
         title: 'SPATIAL ARCHITECTURE',
         stores: [
-          // فروشگاه اول را همان متریال‌های معماری نگه می‌داریم تا تنوع حفظ شود
           {
             id: 'store-promer-core',
             name: 'Promer',
@@ -110,7 +115,6 @@ export const MALL_INTERIORS: MallInteriorData[] = [
               { id: 'p6', name: 'Form Study Chair', price: '$680', image: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?q=80&w=2069&auto=format&fit=crop' }
             ]
           },
-          // ۵ فروشگاه دیگر در این طبقه هم لباس خواهند بود
           ...generateStores('L2', 5),
         ]
       }
@@ -118,33 +122,24 @@ export const MALL_INTERIORS: MallInteriorData[] = [
   }
 ];
 
+// ============================================================================
+// بخش سوم: شبیه‌سازی فراخوانی‌های API (API Calls Simulation)
+// ============================================================================
 
-// شبیه‌سازیِ یک API کال واقعی برای گرفتن اطلاعات پایه مال (کاور و اسم)
 export const fetchMallInfo = async (id: string | number): Promise<Mall> => {
-  return new Promise((resolve, reject) => {
-    // شبیه‌سازی 800 میلی‌ثانیه تاخیر اینترنت
+  return new Promise((resolve) => {
     setTimeout(() => {
       const mall = SPATIAL_MALLS.find((m) => String(m.id) === String(id));
-      if (mall) {
-        resolve(mall);
-      } else {
-        // بازگشتِ مال پیش‌فرض در صورت پیدا نشدن (برای جلوگیری از خطای سرور)
-        resolve(SPATIAL_MALLS[0]); 
-      }
+      resolve(mall || SPATIAL_MALLS[0]);
     }, 800);
   });
 };
 
-// شبیه‌سازیِ یک API کال واقعی برای گرفتن دیتای طبقات و فروشگاه‌ها
 export const fetchMallInterior = async (id: string | number): Promise<MallInteriorData> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     setTimeout(() => {
       const interior = MALL_INTERIORS.find((m) => String(m.mallId) === String(id));
-      if (interior) {
-        resolve(interior);
-      } else {
-        resolve(MALL_INTERIORS[0]);
-      }
+      resolve(interior || MALL_INTERIORS[0]);
     }, 800);
   });
 };

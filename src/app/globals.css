@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
+/* ۱. تنظیم رنگ‌های مینیمال و آرامش‌بخش پروژه */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #111111;
 }
 
 @theme inline {
@@ -12,24 +13,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* ۲. حفظ فونت وزیرمتن */
 @font-face {
   font-family: 'Vazirmatn';
   src: url('/fonts/Vazirmatn-Variable.woff2') format('woff2-variations');
@@ -38,8 +22,13 @@ body {
   font-display: swap;
 }
 
+/* ۳. اعمال استایل‌های پایه روی بادی */
 @layer base {
   body {
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: 'Vazirmatn', system-ui, sans-serif;
+    /* این خط باعث میشه لبه‌ی فونت‌ها نرم بشه و رنگ انتخاب متن (Select) لوکس بشه */
+    @apply antialiased selection:bg-black selection:text-white;
   }
 }
