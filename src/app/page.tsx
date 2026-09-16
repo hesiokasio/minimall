@@ -4,8 +4,9 @@ import BentoGrid from '../components/sections/BentoGrid';
 import HorizontalProductRow from '../components/sections/HorizontalProductRow';
 import { PRODUCTS } from '../data/mockData';
 import HorizontalBrandRow from '../components/sections/HorizontalBrandRow';
-import { FEATURED_BRANDS } from '../data/mockData';
 import Footer from '../components/layout/Footer';
+import DiscoveryRow from '../components/sections/DiscoveryRow'
+import { TRENDING_PRODUCTS, NEW_ARRIVALS, CURATED_EDIT, FEATURED_BRANDS } from '../data/mockData';
 
 export default function Home() {
   return (
@@ -22,6 +23,10 @@ export default function Home() {
 
       <main>
         <Hero />
+        <DiscoveryRow title="Trending Right Now" products={TRENDING_PRODUCTS} />
+        <DiscoveryRow title="Fresh Drops" products={NEW_ARRIVALS} />
+        <HorizontalBrandRow category="The Brand Archive" title="Featured Boutiques" brands={FEATURED_BRANDS} />
+        <DiscoveryRow title="The Considered Edit" products={CURATED_EDIT} />
         <BentoGrid />
         <HorizontalProductRow 
           category="New Arrivals" 

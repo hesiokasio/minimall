@@ -30,7 +30,10 @@ const Navbar = () => {
         <div className="flex items-center justify-end gap-4 md:gap-6 flex-1">
           
           {/* دکمه جستجوی هوشمند (Command Palette) مختص دسکتاپ */}
-          <button className="hidden md:flex items-center gap-3 bg-black/[0.03] hover:bg-black/[0.06] border border-black/[0.05] px-3 py-2 rounded-full transition-colors group">
+          <button 
+  suppressHydrationWarning 
+  className="hidden md:flex items-center gap-3 bg-black/[0.03] hover:bg-black/[0.06] border border-black/5 px-4 py-2 rounded-full transition-colors"
+>
             <Search size={16} strokeWidth={2} className="text-black/40 group-hover:text-black/70 transition-colors" />
             <span className="text-[10px] font-mono text-black/40 group-hover:text-black/60 transition-colors">
               Search products...

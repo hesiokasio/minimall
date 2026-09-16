@@ -143,3 +143,32 @@ export const fetchMallInterior = async (id: string | number): Promise<MallInteri
     }, 800);
   });
 };
+
+
+
+// دیتای ردیف اول: ترندها
+export const TRENDING_PRODUCTS: Product[] = [
+  { id: 't1', name: 'Obsidian Chronograph', price: '$1,200', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80', category: 'Watches' },
+  { id: 't2', name: 'Silk Cascade Scarf', price: '$350', image: 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&q=80', category: 'Fashion' },
+  { id: 't3', name: 'Form Study Chair', price: '$680', image: 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?auto=format&fit=crop&q=80', category: 'Furniture' },
+  { id: 't4', name: 'Ceramic Vessel Set', price: '$140', image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&q=80', category: 'Home' },
+  { id: 't5', name: 'Linen Lounge Set', price: '$285', image: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?auto=format&fit=crop&q=80', category: 'Fashion' },
+];
+
+// دیتای ردیف دوم: تازه‌ها
+export const NEW_ARRIVALS: Product[] = [
+  { id: 'n1', name: 'Minimalist Desk Lamp', price: '$180', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80', category: 'Home' },
+  { id: 'n2', name: 'Matte Black Headphones', price: '$450', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80', category: 'Tech' },
+  { id: 'n3', name: 'Leather Tote Bag', price: '$520', image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&q=80', category: 'Accessories' },
+  { id: 'n4', name: 'Analog Wall Clock', price: '$95', image: 'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?auto=format&fit=crop&q=80', category: 'Home' },
+  { id: 'n5', name: 'Geometric Sunglasses', price: '$210', image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80', category: 'Accessories' },
+];
+
+// دیتای ردیف سوم: پیشنهادهای خاص
+export const CURATED_EDIT: Product[] = [
+  { id: 'c1', name: 'Mechanical Keyboard', price: '$320', image: 'https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&q=80', category: 'Tech' },
+  { id: 'c2', name: 'Concrete Planter', price: '$65', image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&q=80', category: 'Home' },
+  { id: 'c3', name: 'Oversized Wool Coat', price: '$890', image: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&q=80', category: 'Fashion' },
+  { id: 'c4', name: 'Acoustic Speaker', price: '$750', image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&q=80', category: 'Tech' },
+  { id: 'c5', name: 'Silver Signet Ring', price: '$190', image: 'https://images.unsplash.com/photo-1605100804763-247f66129482?auto=format&fit=crop&q=80', category: 'Jewelry' },
+];
