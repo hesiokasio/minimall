@@ -33,12 +33,14 @@ export interface HotspotData {
 }
 
 export interface Product {
-  id: string | number;
+  id: string;
   name: string;
-  price: string | number;
-  image: string;
-  // هات‌اسپات به صورت آپشنال (?) تعریف شد تا اگر محصولی هات‌اسپات نداشت خطا نگیریم
-  hotspots?: HotspotData[]; 
+  price: string;
+  image: string;          // عکس اصلی برای صفحه اول (همان قبلی)
+  images?: string[];      // 🔴 جدید: آرایه عکس‌ها برای گالری صفحه محصول
+  description?: string;   // 🔴 جدید: توضیحات محصول
+  category?: string;      // 🔴 جدید: دسته‌بندی
+  isNew?: boolean;
 }
 
 export interface Brand {

@@ -36,11 +36,11 @@ export const SPATIAL_MALLS: Mall[] = [
 ];
 
 export const PRODUCTS: Product[] = [
-  { id: 1, name: 'Obsidian Chronograph', price: '$1,200', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1999&auto=format&fit=crop' },
-  { id: 2, name: 'Silk Cascade Scarf', price: '$350', image: 'https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?q=80&w=1974&auto=format&fit=crop' },
-  { id: 3, name: 'Form Study Chair', price: '$680', image: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?q=80&w=2069&auto=format&fit=crop' },
-  { id: 4, name: 'Ceramic Vessel Set', price: '$140', image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=2070&auto=format&fit=crop' },
-  { id: 5, name: 'Linen Lounge Pillow', price: '$85', image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?q=80&w=1974&auto=format&fit=crop' }
+  { id: '1', name: 'Obsidian Chronograph', price: '$1,200', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1999&auto=format&fit=crop' },
+  { id: '2', name: 'Silk Cascade Scarf', price: '$350', image: 'https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?q=80&w=1974&auto=format&fit=crop' },
+  { id: '3', name: 'Form Study Chair', price: '$680', image: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?q=80&w=2069&auto=format&fit=crop' },
+  { id: '4', name: 'Ceramic Vessel Set', price: '$140', image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=2070&auto=format&fit=crop' },
+  { id: '5', name: 'Linen Lounge Pillow', price: '$85', image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?q=80&w=1974&auto=format&fit=crop' }
 ];
 
 export const FEATURED_BRANDS: Brand[] = [
@@ -172,3 +172,48 @@ export const CURATED_EDIT: Product[] = [
   { id: 'c4', name: 'Acoustic Speaker', price: '$750', image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&q=80', category: 'Tech' },
   { id: 'c5', name: 'Silver Signet Ring', price: '$190', image: 'https://images.unsplash.com/photo-1605100804763-247f66129482?auto=format&fit=crop&q=80', category: 'Jewelry' },
 ];
+
+
+
+// ==========================================
+// دیتای کامل برای صفحه جزئیات محصول (PDP)
+// ==========================================
+export const DETAILED_PRODUCTS: Product[] = [
+  {
+    id: '1',
+    name: 'Obsidian Chronograph',
+    price: '$1,200',
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80',
+    description: 'A minimalist timepiece crafted from brushed titanium and featuring a deep obsidian dial. Engineered for precision and designed for the modern aesthetic.',
+    category: 'Watches',
+    images: [
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1594534475808-b18fc33b045e?auto=format&fit=crop&q=80'
+    ]
+  },
+  {
+    id: 't1', // این آیدی با یکی از محصولات صفحه اولت یکی است تا وقتی روش کلیک شد کار کند
+    name: 'Obsidian Chronograph',
+    price: '$1,200',
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80',
+    description: 'Our signature trending timepiece. Perfect for any minimalist collection.',
+    category: 'Trending',
+    images: [
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80'
+    ]
+  }
+];
+
+// یک تابع کمکی برای پیدا کردن محصول بر اساس ID
+export const fetchProductById = async (id: string): Promise<Product | undefined> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // اول در دیتای کامل می‌گردد، اگر نبود در دیتای ترندینگ می‌گردد
+      const product = DETAILED_PRODUCTS.find(p => String(p.id) === String(id)) 
+                   || TRENDING_PRODUCTS.find(p => String(p.id) === String(id));
+      resolve(product);
+    }, 400); // شبیه‌سازی تاخیر اینترنت
+  });
+};
