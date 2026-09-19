@@ -1,12 +1,12 @@
-import Navbar from '../components/layout/Navbar';
-import Hero from '../components/sections/Hero';
-import BentoGrid from '../components/sections/BentoGrid';
-import HorizontalProductRow from '../components/sections/HorizontalProductRow';
-import { PRODUCTS } from '../data/mockData';
-import HorizontalBrandRow from '../components/sections/HorizontalBrandRow';
-import Footer from '../components/layout/Footer';
-import DiscoveryRow from '../components/sections/DiscoveryRow'
-import { TRENDING_PRODUCTS, NEW_ARRIVALS, CURATED_EDIT, FEATURED_BRANDS } from '../data/mockData';
+import Navbar from '../../components/layout/Navbar';
+import Hero from '../../components/sections/Hero';
+import BentoGrid from '../../components/sections/BentoGrid';
+import HorizontalProductRow from '../../components/sections/HorizontalProductRow';
+import { PRODUCTS } from '../../data/mockData';
+import HorizontalBrandRow from '../../components/sections/HorizontalBrandRow';
+import Footer from '../../components/layout/Footer';
+import DiscoveryRow from '../../components/sections/DiscoveryRow'
+import { TRENDING_PRODUCTS, NEW_ARRIVALS, CURATED_EDIT, FEATURED_BRANDS } from '../../data/mockData';
 
 export default function Home() {
   return (
