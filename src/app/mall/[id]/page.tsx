@@ -2,6 +2,10 @@
 
 import React, { use, useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link'; // 🔴 اضافه شد
+import Image from 'next/image'; // 🔴 اضافه شد
+import { ArrowLeft } from 'lucide-react'; // 🔴 اضافه شد
+
 import FloorSection from '../../../components/sections/FloorSection';
 import FloorPortal from '../../../components/sections/FloorPortal';
 import ElevatorPanel from '../../../components/layout/ElevatorPanel';
@@ -45,43 +49,33 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
     loadData();
   }, [id]);
 
-  // ۲. رادار طبقات (با موتور مکان‌یابی زنده و ضدگلوله)
   useEffect(() => {
     if (!interiorData) return;
 
     const handleScroll = () => {
-      // اگر کاربر روی دکمه کلیک کرده و آسانسور در حال حرکت است، رادار فضولی نمی‌کند!
       if (isManualScrolling.current) return;
 
-      // نقطه حساسِ سنسور را روی ۳۰ درصدِ بالای مانیتور تنظیم می‌کنیم
       const triggerPoint = window.innerHeight * 0.3; 
       let detectedFloor = 1;
 
-      // بررسی تک‌تک طبقات برای پیدا کردن طبقه‌ای که الان در کادر دید است
       interiorData.floors.forEach((floor, index) => {
         const safeLevel = index + 1;
         const element = floorRefs.current[safeLevel];
         
         if (element) {
           const rect = element.getBoundingClientRect();
-          // شرط پیروزی: بالای طبقه از خط سنسور رد شده و پایینِ طبقه هنوز نگذشته است
           if (rect.top <= triggerPoint && rect.bottom >= triggerPoint) {
             detectedFloor = safeLevel;
           }
         }
       });
 
-      // برای جلوگیری از رندر اضافی، فقط اگر طبقه تغییر کرده بود آپدیتش می‌کنیم
       setActiveFloor((prev) => (prev !== detectedFloor ? detectedFloor : prev));
     };
 
-    // وصل کردن سنسور به اسکرول مرورگر (استفاده از passive برای صفر شدن لگ)
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // یک بار شلیکِ سنسور در لحظه لود شدن صفحه برای پیدا کردن موقعیت اولیه
     handleScroll();
 
-    // پاکسازی سنسور هنگام خروج از صفحه
     return () => window.removeEventListener('scroll', handleScroll);
   }, [interiorData]);
 
@@ -121,26 +115,37 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
   return (
     <main className="relative w-full bg-[#f4f3f0] text-[#1a1a1a] selection:bg-black selection:text-white">
       
-      {/* پنل آسانسور شیشه‌ای */}
       <ElevatorPanel 
         activeFloor={activeFloor} 
         onFloorClick={handleFloorClick} 
       />
 
-      {/* هشتی ورودی */}
       <section className="relative w-full h-[70vh] overflow-hidden flex flex-col justify-center items-center bg-black">
+        
+        {/* 🔴 دکمه بازگشت سریع به صفحه اصلی */}
+        <div className="absolute top-8 left-6 md:left-12 z-50">
+          <Link href="/" className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group">
+            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-mono tracking-widest uppercase mt-0.5">Directory</span>
+          </Link>
+        </div>
+
         <motion.div 
           className="absolute inset-0 z-0"
           initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.5 }}
+          animate={{ scale: 1, opacity: 0.7 }}
           transition={{ duration: 1.5, ease: "easeOut" }}
         >
-          <img 
+          {/* 🔴 تگ Image هوشمند با اولویت لود (priority) */}
+          <Image 
             src={mallInfo.image} 
             alt={mallInfo.title} 
-            className="w-full h-full object-cover mix-blend-luminosity"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover grayscale opacity-80 will-change-transform transform-gpu"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#f4f3f0]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/40 to-[#f4f3f0]" />
         </motion.div>
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 text-white">
@@ -163,7 +168,6 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
         </div>
       </section>
 
-      {/* بخش طبقات (راهنما + فروشگاه‌ها) */}
       <div className="relative z-20 pb-32">
         {interiorData.floors.map((floor, index) => {
           const safeLevel = index + 1;
@@ -175,10 +179,7 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
               ref={(el) => { floorRefs.current[safeLevel] = el; }}
               className="scroll-mt-6"
             >
-              {/* درگاه راهنمای طبقه */}
               <FloorPortalComponent floor={floor} levelNumber={safeLevel} />
-              
-              {/* ویترین فروشگاه‌های طبقه */}
               <FloorSection floor={floor} />
             </div>
           );

@@ -92,9 +92,9 @@ const BentoGrid = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-100" />
               
               <div className="absolute bottom-8 left-0 right-0 flex justify-center">
-                 <button className="px-6 py-3 bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] tracking-widest uppercase font-bold rounded-full flex items-center gap-2 hover:bg-white hover:text-black transition-colors shadow-lg">
-                   + Interactive Editorial
-                 </button>
+                 <button suppressHydrationWarning className="px-6 py-3 bg-white/20 backdrop-blur-md border border-white/30 text-white...">
+  + Interactive Editorial
+</button>
               </div>
             </motion.div>
 
@@ -151,9 +151,9 @@ const BentoGrid = () => {
                 <h3 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tighter">
                   AUTUMN <br/> SYMPHONY
                 </h3>
-                <button className="text-[10px] md:text-xs text-white uppercase tracking-widest flex items-center gap-2 hover:text-white/70 transition-colors border-b border-white/30 pb-1.5 w-fit font-bold">
-                  Explore Collection <ArrowRight size={14} />
-                </button>
+               <button suppressHydrationWarning className="text-[10px] md:text-xs text-white uppercase tracking-widest flex items-center gap-2 hover:text-white/70 transition-colors border-b border-white/30 pb-1.5 w-fit font-bold">
+                 Explore Collection <ArrowRight size={14} />
+               </button>
               </div>
             </motion.div>
 

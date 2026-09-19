@@ -3,16 +3,12 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion'; 
 import { ChevronDown, Search, MapPin, Grid2X2, Building2 } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image'; // 🔴 ایمپورت Image اضافه شد
 
-// 🔴 ۱. فراخوانی کانتینر گلوبال (قانون عرض ثابت پروژه)
 import Container from '../layout/Container';
-
-// 🔴 ۲. فراخوانی دیتا از پایگاه داده فیک (بدون شلوغ کردن کامپوننت)
 import { CITIES, NEIGHBORHOODS, CATEGORIES, MALL_DIRECTORY } from '../../data/mockData';
 
-// ==========================================
-// انیمیشن‌های نرم، آهسته و ابریشمی
-// ==========================================
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -28,14 +24,13 @@ const cardVariants: Variants = {
   hidden: { 
     opacity: 0, 
     scale: 0.85, 
-    y: 30, 
-    filter: "blur(8px)" 
+    y: 30 
+    // 🔴 بلورهای سنگین حذف شدند
   },
   visible: { 
     opacity: 1, 
     scale: 1, 
     y: 0, 
-    filter: "blur(0px)",
     transition: { 
       type: "spring", 
       stiffness: 100, 
@@ -47,7 +42,7 @@ const cardVariants: Variants = {
 
 export default function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCity, setActiveCity] = useState('Tehran'); // دیفالت روی تهران
+  const [activeCity, setActiveCity] = useState('Tehran'); 
   const [activeNeighborhood, setActiveNeighborhood] = useState('ALL');
   const [activeCategory, setActiveCategory] = useState('ALL');
   
@@ -64,16 +59,11 @@ export default function Hero() {
 
   return (
     <section className="w-full min-h-screen flex flex-col items-center pt-[8vh] pb-24">
-      
-      {/* 🔴 ۳. استفاده از Container برای هم‌ترازیِ بی‌نقص با کل پروژه */}
       <Container className="flex flex-col gap-6">
         
-        {/* ========================================================= */}
-        {/* نوار کنترل اصلی (Combo Bar) - Sticky */}
-        {/* ========================================================= */}
         <motion.div 
-          initial={{ opacity: 0, y: -20, filter: "blur(5px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          initial={{ opacity: 0, y: -20 }} // 🔴 بلور حذف شد
+          animate={{ opacity: 1, y: 0 }} // 🔴 بلور حذف شد
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="sticky top-6 z-50 w-full bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-full shadow-[0_4px_30px_rgb(0,0,0,0.06)] border border-black/[0.04] p-1.5 flex flex-col md:flex-row items-center gap-1 shrink-0"
         >
@@ -139,7 +129,6 @@ export default function Hero() {
           </div>
         </motion.div>
 
-        {/* هدر بخش گرید */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -154,9 +143,6 @@ export default function Hero() {
           </span>
         </motion.div>
 
-        {/* ========================================================= */}
-        {/* THE APP ICON GRID (عریض شده متناسب با کانتینر ۱۴۴۰ پیکسل) */}
-        {/* ========================================================= */}
         <div className="w-full mt-4">
           <motion.div 
             initial="hidden"
@@ -170,37 +156,41 @@ export default function Hero() {
                   key={mall.id}
                   layout
                   variants={cardVariants}
-                  exit={{ opacity: 0, scale: 0.9, filter: "blur(5px)", transition: { duration: 0.2 } }}
-                  className="group flex flex-col items-center text-center cursor-pointer"
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                  className="group flex flex-col items-center text-center"
                 >
-                  {/* آیکون مربعی */}
-                  <div className="relative w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-[1.25rem] md:rounded-[1.75rem] bg-gray-100 shadow-sm border border-black/5 group-hover:shadow-[0_15px_30px_-5px_rgba(0,0,0,0.15)] group-hover:-translate-y-2 transition-all duration-400 overflow-hidden mb-3">
-                    <img 
-                      src={mall.image} 
-                      alt={mall.title} 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-                  </div>
-
-                  {/* اطلاعات متنی زیر آیکون */}
-                  <div className="flex flex-col items-center w-full px-1">
-                    <h3 className="text-[10px] md:text-xs font-black text-black uppercase leading-tight truncate w-full group-hover:text-blue-600 transition-colors">
-                      {mall.title}
-                    </h3>
+                  {/* 🔴 تگ Link اینجا اضافه شد */}
+                  <Link href={`/mall/${mall.id}`} className="w-full flex flex-col items-center cursor-pointer">
                     
-                    <div className="mt-1 flex items-center justify-center gap-1.5 text-[8px] md:text-[9px] font-mono text-black/40 uppercase tracking-widest">
-                      <span>{mall.stores} STS</span>
-                      <span className="w-[3px] h-[3px] rounded-full bg-black/20" />
-                      <span>{mall.products} ITM</span>
+                    <div className="relative w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-[1.25rem] md:rounded-[1.75rem] bg-gray-100 shadow-sm border border-black/5 group-hover:shadow-[0_15px_30px_-5px_rgba(0,0,0,0.15)] group-hover:-translate-y-2 transition-all duration-400 overflow-hidden mb-3">
+                      {/* 🔴 تگ Image جایگزین شد */}
+                      <Image 
+                        src={mall.image} 
+                        alt={mall.title} 
+                        fill
+                        sizes="100px" 
+                        className="object-cover transition-transform duration-700 group-hover:scale-110 will-change-transform transform-gpu" 
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
                     </div>
-                  </div>
 
+                    <div className="flex flex-col items-center w-full px-1">
+                      <h3 className="text-[10px] md:text-xs font-black text-black uppercase leading-tight truncate w-full group-hover:text-blue-600 transition-colors">
+                        {mall.title}
+                      </h3>
+                      
+                      <div className="mt-1 flex items-center justify-center gap-1.5 text-[8px] md:text-[9px] font-mono text-black/40 uppercase tracking-widest">
+                        <span>{mall.stores} STS</span>
+                        <span className="w-[3px] h-[3px] rounded-full bg-black/20" />
+                        <span>{mall.products} ITM</span>
+                      </div>
+                    </div>
+
+                  </Link>
                 </motion.div>
               ))}
             </AnimatePresence>
 
-            {/* حالت خالی */}
             {filteredMalls.length === 0 && (
               <div className="col-span-full pt-20 flex flex-col items-center justify-center text-black/30">
                 <Search size={40} className="mb-4 opacity-20" />

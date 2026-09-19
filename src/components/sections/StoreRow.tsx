@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Plus } from 'lucide-react';
+import Image from 'next/image'; // 🔴 اضافه شد
 import { Store, Product } from '../../types';
 
 interface StoreRowProps {
@@ -56,13 +57,13 @@ function ProductCard({
           </div>
         )}
 
-        {/* عکس محصول */}
-        <motion.img
+        {/* 🔴 عکس محصول (تبدیل به Image هوشمند + انتقال انیمیشن به CSS) */}
+        <Image
           src={product.image}
           alt={product.name}
-          className="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 transition-all duration-500 pointer-events-none"
-          animate={{ scale: isHovered ? 1.05 : 1 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          fill
+          sizes="(max-width: 768px) 33vw, 170px"
+          className="object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 pointer-events-none will-change-transform transform-gpu"
           draggable={false}
         />
 
@@ -158,10 +159,13 @@ export default function StoreRow({ store }: StoreRowProps) {
         >
           {/* ۱. کاور ورودی برند (تراز دقیق با ارتفاع کارت‌ها) */}
           <div className="shrink-0 w-[38vw] sm:w-[180px] md:w-[200px] aspect-square relative rounded-xl md:rounded-2xl overflow-hidden group isolate bg-black shadow-[0_8px_20px_-8px_rgba(0,0,0,0.18)]">
-            <img
+            {/* 🔴 تگ Image جایگزین شد */}
+            <Image
               src={store.coverImage}
               alt={store.name}
-              className="absolute inset-0 w-full h-full object-cover opacity-70 transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+              fill
+              sizes="(max-width: 768px) 38vw, 200px"
+              className="object-cover opacity-70 transition-transform duration-700 group-hover:scale-105 pointer-events-none will-change-transform transform-gpu"
               draggable={false}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />

@@ -24,10 +24,10 @@ const Navbar = () => {
           
           {/* سمت چپ: منو */}
           <div className="flex items-center gap-4 w-1/3">
-            <button className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-              <Menu size={20} />
-              <span className="text-sm font-semibold tracking-widest uppercase hidden md:block">Menu</span>
-            </button>
+            <button suppressHydrationWarning className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+  <Menu size={20} />
+  <span className="text-sm font-semibold tracking-widest uppercase hidden md:block">Menu</span>
+</button>
           </div>
 
           {/* وسط: لوگو */}
