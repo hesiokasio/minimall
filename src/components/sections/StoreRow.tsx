@@ -2,9 +2,10 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image'; // 🔴 اضافه شد
 import { Store, Product } from '../../types';
+
 
 interface StoreRowProps {
   store: Store;
@@ -158,19 +159,30 @@ export default function StoreRow({ store }: StoreRowProps) {
           className="flex gap-3 sm:gap-3.5 md:gap-4 pb-2 items-start"
         >
           {/* ۱. کاور ورودی برند (تراز دقیق با ارتفاع کارت‌ها) */}
-          <div className="shrink-0 w-[38vw] sm:w-[180px] md:w-[200px] aspect-square relative rounded-xl md:rounded-2xl overflow-hidden group isolate bg-black shadow-[0_8px_20px_-8px_rgba(0,0,0,0.18)]">
-            {/* 🔴 تگ Image جایگزین شد */}
-            <Image
-              src={store.coverImage}
-              alt={store.name}
-              fill
-              sizes="(max-width: 768px) 38vw, 200px"
-              className="object-cover opacity-70 transition-transform duration-700 group-hover:scale-105 pointer-events-none will-change-transform transform-gpu"
-              draggable={false}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+          {/* ۱. کاور ورودی برند (تراز دقیق با ارتفاع کارت‌ها) */}
+          <div className="shrink-0 w-[38vw] sm:w-[180px] md:w-[200px] aspect-square relative rounded-xl md:rounded-2xl overflow-hidden group isolate bg-black shadow-[0_8px_20px_-8px_rgba(0,0,0,0.18)] flex items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a]">
+            {/* چک می‌کنیم آیا عکس وجود دارد یا نه */}
+            {store.coverImage ? (
+              <>
+                <Image
+                  src={store.coverImage}
+                  alt={store.name}
+                  fill
+                  sizes="(max-width: 768px) 38vw, 200px"
+                  className="object-cover opacity-70 transition-transform duration-700 group-hover:scale-105 pointer-events-none will-change-transform transform-gpu"
+                  draggable={false}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+              </>
+            ) : (
+              // اگر عکس نداشت، این آیکون شیک نشان داده می‌شود
+              <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 group-hover:opacity-60 transition-opacity duration-300">
+                <ImageIcon size={32} strokeWidth={1} className="text-white mb-2" />
+                <span className="text-[10px] text-white/70 font-mono uppercase tracking-widest">{store.name}</span>
+              </div>
+            )}
 
-            <div className="absolute inset-0 p-3 md:p-3.5 flex flex-col justify-end pointer-events-none">
+            <div className="absolute inset-0 p-3 md:p-3.5 flex flex-col justify-end pointer-events-none z-10">
               <span className="text-[7px] md:text-[8px] uppercase tracking-[0.2em] text-white/60 mb-1 font-medium">
                 Showcase
               </span>

@@ -46,6 +46,7 @@ const Navbar = () => {
             
             {/* ۴. دکمه سبد خریدِ داینامیک و انیمیشن‌دار */}
             <button 
+              suppressHydrationWarning
               onClick={openCart}
               className="relative p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer group"
             >

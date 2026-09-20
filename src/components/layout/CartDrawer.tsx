@@ -18,10 +18,13 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
   // ۳. تابع هوشمند برای محاسبه جمع کل قیمت‌ها
   const calculateSubtotal = () => {
     const total = cartItems.reduce((acc, item) => {
-      // تبدیل قیمت متنی (مثل "$1,200") به عدد ریاضی (1200) برای ضرب در تعداد
-      const priceNumber = parseInt(item.price.replace(/[^0-9]/g, ''), 10);
-      return acc + (priceNumber * item.quantity);
-    }, 0);
+    // تبدیل هوشمند قیمت: اگر عدد بود مستقیم استفاده کن، اگر متن بود حروف را پاک کن
+    const priceNumber = typeof item.price === 'number' 
+      ? item.price 
+      : parseInt(String(item.price).replace(/[^0-9]/g, ''), 10) || 0;
+      
+    return acc + (priceNumber * item.quantity);
+  }, 0);
     
     // برگرداندن عدد نهایی به فرمت پول با علامت دلار و کاما
     return new Intl.NumberFormat('en-US', { 

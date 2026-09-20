@@ -2,21 +2,20 @@
 
 import React, { use, useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import Link from 'next/link'; // 🔴 اضافه شد
-import Image from 'next/image'; // 🔴 اضافه شد
-import { ArrowLeft } from 'lucide-react'; // 🔴 اضافه شد
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowLeft } from 'lucide-react';
+import { createClient } from '../../../../utils/supabase/client'; // 🔴 اضافه شد
 
-import FloorSection from '../../../components/sections/FloorSection';
-import FloorPortal from '../../../components/sections/FloorPortal';
-import ElevatorPanel from '../../../components/layout/ElevatorPanel';
-import { fetchMallInfo, fetchMallInterior } from '../../../data/mockData';
-import { Mall, MallInteriorData } from '../../../types';
+import FloorSection from '../../../../components/sections/FloorSection';
+import FloorPortal from '../../../../components/sections/FloorPortal';
+import ElevatorPanel from '../../../../components/layout/ElevatorPanel';
 
 export default function MallInterior({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
-  const [mallInfo, setMallInfo] = useState<Mall | null>(null);
-  const [interiorData, setInteriorData] = useState<MallInteriorData | null>(null);
+  const [mallInfo, setMallInfo] = useState<any>(null);
+  const [interiorData, setInteriorData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [activeFloor, setActiveFloor] = useState<number>(1);
@@ -27,26 +26,89 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      const supabase = createClient();
+
       try {
-        const [infoResult, interiorResult] = await Promise.all([
-          fetchMallInfo(id),
-          fetchMallInterior(id)
-        ]);
+        // 🔴 تغییر مهم: استفاده از maybeSingle به جای single
+        const { data: mall, error: mallError } = await supabase
+          .from('malls')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (mallError) {
+          console.error("جزئیات خطای پاساژ:", mallError);
+          setIsLoading(false);
+          return; // خروج از تابع
+        }
+
+        // اگر پاساژی با این آیدی پیدا نشد
+        if (!mall) {
+          console.error("پاساژی با این آیدی در دیتابیس وجود ندارد!");
+          setIsLoading(false);
+          return;
+        }
+
+        // دریافت مغازه‌ها به همراه محصولاتشان
+        const { data: stores, error: storesError } = await supabase
+          .from('stores')
+          .select('*, products(*)')
+          .eq('mall_id', mall.id);
+
+        if (storesError) throw storesError;
+
+        setMallInfo({
+          id: mall.id,
+          title: mall.name,
+          image: mall.cover_image || 'https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?q=80&w=2000&auto=format&fit=crop',
+        });
+
+        const floorsArray = [];
+        const totalFloors = mall.total_floors || 1;
+
+        for (let i = 1; i <= totalFloors; i++) {
+          const floorStores = (stores || [])
+            // 🔴 راز حل مشکل اینجاست: ستون floor_level را به عدد تبدیل می‌کنیم تا مقایسه درست انجام شود
+            .filter(store => Number(store.floor_level) === i)
+            .map(store => ({
+              id: store.id,
+              name: store.brand_name || 'بدون نام',
+              tagline: store.tagline || '',
+              logo: store.cover_image_url || null,
+              products: (store.products || [])
+                .filter((p: any) => p.is_published)
+                .map((p: any) => ({
+                  id: p.id,
+                  name: p.name,
+                  price: p.price,
+                  image: p.image_url
+                }))
+            }));
+
+          floorsArray.push({
+            id: `floor-${i}`,
+            level: i,
+            title: `طبقه ${i}`,
+            stores: floorStores
+          });
+        }
+
+        setInteriorData({ floors: floorsArray });
         
-        setMallInfo(infoResult);
-        setInteriorData(interiorResult);
-        
-        if (interiorResult.floors.length > 0) {
+        if (floorsArray.length > 0) {
           setActiveFloor(1);
         }
+
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching live mall data:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadData();
+    if (id) {
+      loadData();
+    }
   }, [id]);
 
   useEffect(() => {
@@ -54,11 +116,10 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
 
     const handleScroll = () => {
       if (isManualScrolling.current) return;
-
       const triggerPoint = window.innerHeight * 0.3; 
       let detectedFloor = 1;
 
-      interiorData.floors.forEach((floor, index) => {
+      interiorData.floors.forEach((floor: any, index: number) => {
         const safeLevel = index + 1;
         const element = floorRefs.current[safeLevel];
         
@@ -84,7 +145,6 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
     setActiveFloor(level);
     
     const targetElement = floorRefs.current[level];
-    
     if (targetElement) {
       const offsetTop = targetElement.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({
@@ -106,7 +166,7 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           className="text-white tracking-[0.3em] text-xs uppercase font-mono"
         >
-          Connecting to Space...
+          Connecting to Database...
         </motion.div>
       </div>
     );
@@ -121,8 +181,6 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
       />
 
       <section className="relative w-full h-[70vh] overflow-hidden flex flex-col justify-center items-center bg-black">
-        
-        {/* 🔴 دکمه بازگشت سریع به صفحه اصلی */}
         <div className="absolute top-8 left-6 md:left-12 z-50">
           <Link href="/" className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group">
             <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
@@ -136,7 +194,6 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
           animate={{ scale: 1, opacity: 0.7 }}
           transition={{ duration: 1.5, ease: "easeOut" }}
         >
-          {/* 🔴 تگ Image هوشمند با اولویت لود (priority) */}
           <Image 
             src={mallInfo.image} 
             alt={mallInfo.title} 
@@ -163,13 +220,13 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
              transition={{ duration: 1, delay: 0.4 }}
              className="mt-4 text-white/70 font-light tracking-widest uppercase text-xs"
           >
-            Scroll to explore stores
+            Scroll to explore {interiorData.floors.length} floors
           </motion.p>
         </div>
       </section>
 
       <div className="relative z-20 pb-32">
-        {interiorData.floors.map((floor, index) => {
+        {interiorData.floors.map((floor: any, index: number) => {
           const safeLevel = index + 1;
           
           return (
