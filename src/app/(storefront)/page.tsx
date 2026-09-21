@@ -6,7 +6,10 @@ import { PRODUCTS } from '../../data/mockData';
 import HorizontalBrandRow from '../../components/sections/HorizontalBrandRow';
 import Footer from '../../components/layout/Footer';
 import DiscoveryRow from '../../components/sections/DiscoveryRow'
-import { TRENDING_PRODUCTS, NEW_ARRIVALS, CURATED_EDIT, FEATURED_BRANDS } from '../../data/mockData';
+import { NEW_ARRIVALS, CURATED_EDIT, FEATURED_BRANDS } from '../../data/mockData';
+
+// اضافه کردن کامپوننت زنده
+import LiveTrendingProducts from '../../components/sections/LiveTrendingProducts'; 
 
 export default function Home() {
   return (
@@ -23,7 +26,11 @@ export default function Home() {
 
       <main>
         <Hero />
-        <DiscoveryRow title="Trending Right Now" products={TRENDING_PRODUCTS} />
+        
+        {/* ردیف اول حالا داینامیک است و از دیتابیس می‌خواند */}
+        <LiveTrendingProducts />
+        
+        {/* بقیه ردیف‌ها فعلاً به صورت هاردکد باقی می‌مانند تا بعداً آن‌ها را هم داینامیک کنیم */}
         <DiscoveryRow title="Fresh Drops" products={NEW_ARRIVALS} />
         <HorizontalBrandRow category="The Brand Archive" title="Featured Boutiques" brands={FEATURED_BRANDS} />
         <DiscoveryRow title="The Considered Edit" products={CURATED_EDIT} />
