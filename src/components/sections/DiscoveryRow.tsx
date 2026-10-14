@@ -2,20 +2,41 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, ChevronRight } from 'lucide-react';
-import Link from 'next/link'; // 🔴 لینکِ جادویی Next.js اضافه شد
-import { Product } from '../../types';
+import { Heart, ChevronRight, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import Container from '../layout/Container';
+import { createClient } from '../../utils/supabase/client'; // 🔴 آدرس کلاینت سوپابیس شما
 
+// دیگر نیازی به پاس دادن دیتای فیک از بیرون نداریم
 interface DiscoveryRowProps {
-  title: string;
-  products: Product[];
+  title?: string;
+  sectionId?: string;
 }
 
-const DiscoveryRow = ({ title, products }: DiscoveryRowProps) => {
+const DiscoveryRow = ({ title = "محصولات جدید (Fresh Drops)" }: DiscoveryRowProps) => {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [dragConstraints, setDragConstraints] = useState(0);
-  const displayProducts = products.slice(0, 10);
+  
+  // 🔴 استیت‌های جدید برای اتصال به سرور
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
+
+  // 🔴 دریافت محصولات واقعی از دیتابیس
+  useEffect(() => {
+    async function fetchLatestProducts() {
+      // فعلاً ۱۰ محصول آخر را از دیتابیس می‌گیریم
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      if (data) setProducts(data);
+      setIsLoading(false);
+    }
+    fetchLatestProducts();
+  }, []);
 
   useEffect(() => {
     if (carouselRef.current) {
@@ -24,6 +45,18 @@ const DiscoveryRow = ({ title, products }: DiscoveryRowProps) => {
       );
     }
   }, [products]);
+
+  // نمایش حالت لودینگ در زمان دریافت دیتا
+  if (isLoading) {
+    return (
+      <div className="w-full flex justify-center py-12">
+        <Loader2 className="animate-spin text-gray-300" size={32} />
+      </div>
+    );
+  }
+
+  // اگر محصولی در دیتابیس نبود، این بخش کلاً رندر نمی‌شود
+  if (products.length === 0) return null; 
 
   return (
     <section className="w-full py-6 md:py-8 relative z-20">
@@ -36,16 +69,15 @@ const DiscoveryRow = ({ title, products }: DiscoveryRowProps) => {
           </h2>
         </div>
 
-        <div ref={carouselRef} className="w-full overflow-hidden">
+        <div ref={carouselRef} className="w-full overflow-hidden" dir="ltr">
           <motion.div
             drag="x"
             dragConstraints={{ right: 0, left: -dragConstraints }}
             dragElastic={0.15}
             className="flex gap-4 pb-4 cursor-grab active:cursor-grabbing w-fit"
           >
-            {/* 🔴 رندر کردن کارت‌ها با قابلیت کلیک */}
-            {displayProducts.map((product) => (
-              // تگ Link دور کل کارت قرار گرفت
+            {/* 🔴 رندر کردن محصولات واقعی دیتابیس */}
+            {products.map((product) => (
               <Link 
                 href={`/product/${product.id}`} 
                 key={product.id}
@@ -54,17 +86,16 @@ const DiscoveryRow = ({ title, products }: DiscoveryRowProps) => {
                 <motion.div className="flex flex-col h-full">
                   <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-[#e9e9e5] mb-2 isolate">
                     <img 
-                      src={product.image} 
+                      // 🔴 اتصال به عکس واقعی، و یک عکس پیش‌فرض در صورت نداشتن عکس
+                      src={product.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=500'} 
                       alt={product.name} 
                       className="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105 pointer-events-none"
                       draggable={false}
                     />
-                    {/* دکمه قلب (برای اینکه با کلیک روی قلب وارد صفحه نشویم، e.preventDefault اضافه شد) */}
                     <button 
                       suppressHydrationWarning
                       onClick={(e) => {
-                        e.preventDefault(); // 🔴 جلوگیری از باز شدن لینک هنگام لایک کردن
-                        // اینجا بعداً منطق لایک را می‌نویسیم
+                        e.preventDefault(); 
                       }}
                       className="absolute top-2 right-2 p-1.5 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:scale-110 active:scale-95 transition-all z-10 pointer-events-auto drop-shadow-md"
                     >
@@ -72,18 +103,21 @@ const DiscoveryRow = ({ title, products }: DiscoveryRowProps) => {
                     </button>
                   </div>
                   
-                  <div className="flex flex-col px-0.5 pointer-events-none gap-[2px]">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-semibold text-[15px] text-[#222222] truncate pr-2 leading-tight">
-                        {product.name}
-                      </h3>
+                  <div className="flex flex-col px-0.5 pointer-events-none gap-[2px] text-right" dir="rtl">
+                    <div className="flex justify-between items-start flex-row-reverse">
                       <span className="flex items-center gap-1 text-[13px] font-normal text-[#222222] shrink-0">
-                        ★ 4.9
+                        ★ 5.0
                       </span>
+                      <h3 className="font-semibold text-[15px] text-[#222222] truncate pl-2 leading-tight">
+                        {product.name} {/* 🔴 نام واقعی محصول */}
+                      </h3>
                     </div>
-                    <p className="text-[#717171] text-[14px] truncate leading-tight">Explore Collection</p>
-                    <div className="mt-[2px]">
-                      <span className="font-semibold text-[14px] text-[#222222]">{product.price}</span>
+                    <p className="text-[#717171] text-[14px] truncate leading-tight">پرومر</p>
+                    <div className="mt-[2px] flex justify-end">
+                      <span className="font-semibold text-[14px] text-[#222222]">
+                        {/* 🔴 قیمت واقعی با فرمت جداکننده هزارگان (تومان) */}
+                        {Number(product.price).toLocaleString('fa-IR')} تومان
+                      </span>
                     </div>
                   </div>
                 </motion.div>
@@ -95,7 +129,7 @@ const DiscoveryRow = ({ title, products }: DiscoveryRowProps) => {
                 <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors duration-300">
                   <ChevronRight size={20} />
                 </div>
-                <span className="font-semibold text-[15px] text-[#222222] underline-offset-4 group-hover:underline">See all</span>
+                <span className="font-semibold text-[15px] text-[#222222] underline-offset-4 group-hover:underline">مشاهده همه</span>
               </div>
             </motion.div>
 

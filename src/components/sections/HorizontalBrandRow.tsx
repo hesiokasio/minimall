@@ -3,33 +3,53 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-import { Brand } from '../../types';
-
-// 🔴 فراخوانی کانتینر مرجع پروژه برای کنترل عرض
+import Link from 'next/link';
 import Container from '../layout/Container';
+import { createClient } from '../../utils/supabase/client';
 
 interface HorizontalBrandRowProps {
-  category: string;
-  title: string;
-  brands: Brand[];
+  category?: string;
+  title?: string;
+  sectionId?: string; 
 }
 
-const HorizontalBrandRow = ({ category, title, brands }: HorizontalBrandRowProps) => {
+const HorizontalBrandRow = ({ category = "Boutiques", title = "Featured Brands", sectionId }: HorizontalBrandRowProps) => {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [dragConstraints, setDragConstraints] = useState(0);
+  const [banners, setBanners] = useState<any[]>([]);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (sectionId) {
+      const fetchBanners = async () => {
+        const { data } = await supabase
+          .from('home_section_items')
+          .select('id, image_url, target_link, title') // 🔴 اضافه شدن title برای نمایش نام برند روی عکس
+          .eq('section_id', sectionId);
+        
+        if (data) setBanners(data);
+      };
+      fetchBanners();
+    }
+  }, [sectionId]);
 
   useEffect(() => {
     if (carouselRef.current) {
-      setDragConstraints(
-        carouselRef.current.scrollWidth - carouselRef.current.offsetWidth
-      );
+      setTimeout(() => {
+        if (carouselRef.current) {
+          setDragConstraints(
+            carouselRef.current.scrollWidth - carouselRef.current.offsetWidth
+          );
+        }
+      }, 100);
     }
-  }, [brands]);
+  }, [banners]);
+
+  if (!sectionId || banners.length === 0) return null;
 
   return (
     <section className="w-full py-16 md:py-24 relative z-20 overflow-hidden">
-      
-      {/* 🔴 کانتینر حالا کل محتوا (هم هدر و هم اسلایدر) را در بر می‌گیرد */}
       <Container>
         
         {/* هدر */}
@@ -47,49 +67,41 @@ const HorizontalBrandRow = ({ category, title, brands }: HorizontalBrandRowProps
           </div>
         </div>
 
-        {/* 
-          🔴 اسلایدر حالا داخل کانتینر است
-          - کلاس‌های پدینگ دستی و calc کاملاً حذف شدند.
-          - فقط با یک w-full عرض خود را دقیقا مطابق فایل Container.tsx تنظیم می‌کند.
-        */}
-        <div 
-          ref={carouselRef} 
-          className="w-full overflow-hidden"
-        >
+        {/* اسلایدر */}
+        <div ref={carouselRef} className="w-full overflow-hidden">
           <motion.div
             drag="x"
             dragConstraints={{ right: 0, left: -dragConstraints }}
             dragElastic={0.15}
-            className="flex gap-6 pb-8 cursor-grab active:cursor-grabbing w-fit" // pr-[10vw] حذف شد تا کارت آخر دقیق مماس شود
+            className="flex gap-6 pb-8 cursor-grab active:cursor-grabbing w-fit"
           >
-            {brands.map((brand) => (
+            {banners.map((banner) => (
               <motion.div 
-                key={brand.id}
+                key={banner.id}
                 className="shrink-0 w-[85vw] md:w-[500px] aspect-[16/9] relative rounded-[2rem] overflow-hidden group bg-black isolate translate-z-0"
                 whileHover={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               >
-                {/* عکس پس‌زمینه */}
+                <Link href={banner.target_link || '#'} className="absolute inset-0 z-20" draggable={false}>
+                  <span className="sr-only">مشاهده بوتیک</span>
+                </Link>
+
                 <img 
-                  src={brand.image} 
-                  alt={brand.name} 
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 transition-all duration-700 group-hover:scale-105 group-hover:opacity-40 pointer-events-none"
+                  src={banner.image_url} 
+                  alt={banner.title || "Boutique"} 
+                  className="absolute inset-0 w-full h-full object-cover opacity-80 transition-all duration-700 group-hover:scale-105 group-hover:opacity-40 pointer-events-none"
                   draggable={false}
                 />
                 
-                {/* گرادیانت */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-                {/* محتوای متنی کارت */}
-                <div className="absolute inset-0 p-8 flex flex-col justify-end pointer-events-none">
+                {/* 🔴 این قسمت اصلاح شد: حاشیه (padding) به متون برگشت */}
+                <div className="absolute inset-0 p-8 flex flex-col justify-end pointer-events-none z-10">
                   <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 uppercase tracking-tight">
-                      {brand.name}
+                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 uppercase tracking-tight">
+                      {banner.title || "Featured"}
                     </h3>
-                    <p className="text-white/70 text-sm font-light mb-6">
-                      {brand.tagline}
-                    </p>
-                    <button className="text-xs text-white uppercase tracking-widest flex items-center gap-2 pointer-events-auto w-fit opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <button className="text-xs text-white uppercase tracking-widest flex items-center gap-2 pointer-events-auto w-fit font-bold">
                       Enter Boutique <ArrowRight size={14} />
                     </button>
                   </div>

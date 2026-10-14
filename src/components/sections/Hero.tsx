@@ -54,10 +54,18 @@ export default function Hero() {
   // 🔴 دریافت اطلاعات زنده پاساژها از دیتابیس
   useEffect(() => {
     async function fetchMalls() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('malls')
-        .select('*')
+        .select(`
+          *,
+          stores:stores(count),
+          products:products(count)
+        `)
         .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error("Supabase Error:", error.message);
+      }
         
       if (data) setMalls(data);
       setIsLoading(false);
@@ -210,10 +218,13 @@ export default function Hero() {
                         </h3>
                         
                         <div className="mt-1 flex items-center justify-center gap-1.5 text-[8px] md:text-[9px] font-mono text-black/40 uppercase tracking-widest">
-                          {/* فعلاً اعداد صفر هستند تا در آینده دیتابیس را برای تعداد غرفه‌ها آپدیت کنیم */}
-                          <span>{mall.total_stores || 0} STS</span>
-                          <span className="w-[3px] h-[3px] rounded-full bg-black/20" />
-                          <span>{mall.total_products || 0} ITM</span>
+                           {/* خواندن تعداد غرفه‌ها از دیتابیس (اگر null بود 0 نشان بده) */}
+                           <span>{mall.stores?.[0]?.count || 0} STS</span>
+                           
+                           <span className="w-[3px] h-[3px] rounded-full bg-black/20" />
+                           
+                           {/* خواندن تعداد محصولات از دیتابیس */}
+                           <span>{mall.products?.[0]?.count || 0} ITM</span>
                         </div>
                       </div>
 

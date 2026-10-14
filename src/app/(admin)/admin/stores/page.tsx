@@ -1,117 +1,270 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Store, ShieldCheck, Ban, Loader2, Search, MapPin } from 'lucide-react';
-import { createClient } from '../../../../utils/supabase/client';
+import React, { useState, useEffect } from 'react';
+import { Loader2, UploadCloud, Store, Building2, Edit2, Trash2 } from 'lucide-react';
+import Image from 'next/image';
+import { createClient } from '../../../../utils/supabase/client'; // مسیر را بر اساس ساختار پوشه خودتان چک کنید
 
-export default function AdminStoresPage() {
+export default function StoresManager() {
   const [stores, setStores] = useState<any[]>([]);
+  const [malls, setMalls] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // فیلدهای فرم (بر اساس ستون‌های دیتابیس شما)
+  const [brandName, setBrandName] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [selectedMall, setSelectedMall] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const supabase = createClient();
 
   useEffect(() => {
-    async function fetchStores() {
-      // دریافت لیست تمام غرفه‌ها به همراه نام پاساژی که در آن قرار دارند
-      const { data } = await supabase
-        .from('stores')
-        .select(`
-          *,
-          malls ( name )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (data) setStores(data);
-      setIsLoading(false);
-    }
-    fetchStores();
+    fetchData();
   }, []);
 
-  return (
-    <div className="p-6 md:p-12 max-w-6xl mx-auto w-full" dir="rtl">
+  async function fetchData() {
+    setIsLoading(true);
+    // ۱. دریافت لیست پاساژها برای منوی کشویی
+    const { data: mallsData } = await supabase.from('malls').select('id, name');
+    if (mallsData) setMalls(mallsData);
+
+    // ۲. دریافت لیست غرفه‌ها به همراه نام پاساژشان
+    const { data: storesData } = await supabase
+      .from('stores')
+      .select('*, malls(name)')
+      .order('created_at', { ascending: false });
+    
+    if (storesData) setStores(storesData);
+    setIsLoading(false);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMall) {
+      alert('لطفاً یک پاساژ را انتخاب کنید!');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSuccessMsg('');
+    let finalImageUrl = existingImageUrl;
+
+    // آپلود عکس (برای راحتی کار، عکس‌های غرفه را هم در همان باکت malls ولی در پوشه stores ذخیره می‌کنیم)
+    if (selectedFile) {
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `stores/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       
-      <header className="mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-gray-900">فروشندگان و غرفه‌ها</h1>
-          <p className="text-gray-500 mt-2 text-sm">نظارت بر برندها و مغازه‌های فعال در پلتفرم.</p>
-        </div>
-        <div className="relative w-full md:w-72">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input 
-            type="text" 
-            placeholder="جستجوی نام فروشگاه..."
-            className="w-full bg-white border border-gray-100 focus:border-gray-200 rounded-xl py-3 pr-11 pl-4 text-sm font-medium outline-none transition-all shadow-sm"
-          />
-        </div>
-      </header>
+      const { error: uploadError } = await supabase.storage
+        .from('malls')
+        .upload(fileName, selectedFile);
 
-      <div className="bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center p-12"><Loader2 className="animate-spin text-gray-400" size={32} /></div>
-        ) : stores.length === 0 ? (
-          <div className="text-center p-12 text-gray-400 text-sm font-medium">
-            هیچ فروشگاهی در سیستم ثبت نشده است.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100 text-gray-400 font-bold uppercase tracking-widest text-[10px]">
-                <tr>
-                  <th className="px-6 py-4">نام غرفه</th>
-                  <th className="px-6 py-4">مکان (پاساژ / طبقه)</th>
-                  <th className="px-6 py-4">مالک (Owner ID)</th>
-                  <th className="px-6 py-4 text-left">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {stores.map((store) => (
-                  <tr key={store.id} className="hover:bg-gray-50/50 transition-colors group">
-                    
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
-                          <Store size={18} />
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-900">{store.name}</div>
-                          <div className="text-[10px] text-gray-400 tracking-wider mt-0.5">{store.tagline || '---'}</div>
-                        </div>
-                      </div>
-                    </td>
+      if (uploadError) {
+        alert('خطا در آپلود عکس: ' + uploadError.message);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const response = supabase.storage.from('malls').getPublicUrl(fileName);
+      finalImageUrl = response.data?.publicUrl || (response as any).publicURL || null;
+    }
 
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-gray-600 font-medium text-xs">
-                        <MapPin size={14} className="text-gray-400" />
-                        {store.malls?.name || 'نامشخص'}
-                        <span className="text-gray-300 mx-1">|</span>
-                        طبقه {store.floor_level}
-                      </div>
-                    </td>
+    const payload = {
+      brand_name: brandName,
+      tagline: tagline,
+      mall_id: selectedMall,
+      cover_image_uri: finalImageUrl,
+    };
 
-                    <td className="px-6 py-4">
-                      <div className="text-[10px] font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded-md inline-block" dir="ltr">
-                        {store.owner_id ? store.owner_id.substring(0, 8) + '...' : 'System'}
-                      </div>
-                    </td>
+    if (editingId) {
+      const { error } = await supabase.from('stores').update(payload).eq('id', editingId);
+      if (!error) {
+        setSuccessMsg(`تغییرات غرفه "${brandName}" با موفقیت ذخیره شد.`);
+        resetForm();
+      } else alert('خطا در ویرایش: ' + error.message);
+    } else {
+      const { error } = await supabase.from('stores').insert([payload]);
+      if (!error) {
+        setSuccessMsg(`غرفه "${brandName}" با موفقیت ثبت شد.`);
+        resetForm();
+      } else alert('خطا در ثبت: ' + error.message);
+    }
+    
+    fetchData();
+    setIsSubmitting(false);
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
 
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="تایید فروشگاه">
-                          <ShieldCheck size={18} />
-                        </button>
-                        <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="تعلیق">
-                          <Ban size={18} />
-                        </button>
-                      </div>
-                    </td>
-                    
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+  const resetForm = () => {
+    setBrandName('');
+    setTagline('');
+    setSelectedMall('');
+    setSelectedFile(null);
+    setExistingImageUrl(null);
+    setEditingId(null);
+  };
+
+  const handleEdit = (store: any) => {
+    setEditingId(store.id);
+    setBrandName(store.brand_name || '');
+    setTagline(store.tagline || '');
+    setSelectedMall(store.mall_id || '');
+    setExistingImageUrl(store.cover_image_uri);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-8 bg-gray-50 min-h-screen font-sans" dir="rtl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2">
+          <Store className="text-blue-600" /> مدیریت غرفه‌ها
+        </h1>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* فرم ثبت/ویرایش */}
+        <div className="lg:col-span-1">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-6">
+            <h2 className="text-lg font-bold text-gray-700 mb-4">
+              {editingId ? `ویرایش غرفه: ${brandName}` : 'ثبت غرفه جدید'}
+            </h2>
+            
+            {successMsg && (
+              <div className="mb-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg border border-green-100">
+                {successMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">نام برند / غرفه</label>
+                <input 
+                  type="text" 
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  placeholder="مثلاً: پرومر" 
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">شعار یا حوزه فعالیت</label>
+                <input 
+                  type="text" 
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  placeholder="مثلاً: تولیدکننده چسب کاشی و پودر بندکشی" 
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">انتخاب پاساژ</label>
+                <div className="relative">
+                  <Building2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <select 
+                    value={selectedMall}
+                    onChange={(e) => setSelectedMall(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-2.5 text-sm outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                    required
+                  >
+                    <option value="">-- پاساژ را انتخاب کنید --</option>
+                    {malls.map(mall => (
+                      <option key={mall.id} value={mall.id}>{mall.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">تصویر کاور / لوگو</label>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center gap-2 pointer-events-none">
+                    <UploadCloud className="text-gray-400" size={24} />
+                    <span className="text-xs text-gray-500 font-medium">
+                      {selectedFile ? selectedFile.name : 'برای انتخاب عکس کلیک کنید'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="w-full bg-black text-white rounded-xl py-3 text-sm font-bold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                  {isSubmitting ? 'در حال ذخیره...' : 'ثبت در دیتابیس'}
+                </button>
+                {editingId && (
+                  <button 
+                    type="button" 
+                    onClick={resetForm}
+                    className="w-full mt-2 bg-gray-100 text-gray-600 rounded-xl py-3 text-sm font-bold hover:bg-gray-200 transition-colors"
+                  >
+                    انصراف
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* لیست غرفه‌ها */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-bold text-gray-700 mb-6 flex items-center gap-2">
+              <Store size={20} className="text-gray-400" /> غرفه‌های فعال ({stores.length})
+            </h2>
+            
+            {isLoading ? (
+              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-gray-300" size={32} /></div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stores.map(store => (
+                  <div key={store.id} className="flex gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all group bg-gray-50/50">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0">
+                      {store.cover_image_uri ? (
+                        <Image src={store.cover_image_uri} alt={store.brand_name || 'بدون نام'} fill className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400"><Store size={24} /></div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col justify-center overflow-hidden">
+                      <h3 className="font-bold text-gray-800 text-sm truncate">{store.brand_name || 'بدون نام'}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{store.tagline || 'بدون شعار'}</p>
+                      
+                      {/* نمایش نام پاساژ */}
+                      <div className="mt-2 flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-md w-fit">
+                        <Building2 size={10} />
+                        {store.malls?.name || 'پاساژ نامشخص'}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => handleEdit(store)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

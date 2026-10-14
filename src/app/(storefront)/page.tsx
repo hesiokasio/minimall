@@ -2,16 +2,26 @@ import Navbar from '../../components/layout/Navbar';
 import Hero from '../../components/sections/Hero';
 import BentoGrid from '../../components/sections/BentoGrid';
 import HorizontalProductRow from '../../components/sections/HorizontalProductRow';
-import { PRODUCTS } from '../../data/mockData';
 import HorizontalBrandRow from '../../components/sections/HorizontalBrandRow';
 import Footer from '../../components/layout/Footer';
-import DiscoveryRow from '../../components/sections/DiscoveryRow'
-import { NEW_ARRIVALS, CURATED_EDIT, FEATURED_BRANDS } from '../../data/mockData';
+import DiscoveryRow from '../../components/sections/DiscoveryRow';
+import FullBanner from '../../components/sections/FullBanner';
 
-// اضافه کردن کامپوننت زنده
-import LiveTrendingProducts from '../../components/sections/LiveTrendingProducts'; 
+import { PRODUCTS, FEATURED_BRANDS } from '../../data/mockData';
+import { createClient } from '../../utils/supabase/client'; // ایمپورت دیتابیس
 
-export default function Home() {
+// این خط به نکست‌جی‌اس می‌گوید که این صفحه را کش نکند تا به محض تغییر در پنل ادمین، سایت آپدیت شود
+export const revalidate = 0; 
+
+export default async function Home() {
+  const supabase = createClient();
+  
+  // ۱. گرفتن لیست چیدمان‌ها از دیتابیس به ترتیب دلخواه شما
+  const { data: sections } = await supabase
+    .from('home_sections')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
   return (
     <div className="min-h-screen bg-[#f4f3f0] text-[#1a1a1a] font-sans selection:bg-black selection:text-white relative">
       
@@ -25,26 +35,48 @@ export default function Home() {
       <Navbar />
 
       <main>
+        {/* هدر سایت همیشه ثابت است */}
         <Hero />
         
-        {/* ردیف اول حالا داینامیک است و از دیتابیس می‌خواند */}
-        <LiveTrendingProducts />
+        {/* ۲. رندر کردن اتوماتیک ردیف‌ها بر اساس چیزی که در پنل ادمین ساختید */}
+        {sections?.map((section) => {
+          
+          // اگر نوع چیدمان اسلایدر محصول بود
+          if (section.type === 'product_carousel') {
+            return (
+              <DiscoveryRow 
+                key={section.id} 
+                title={section.title} 
+                sectionId={section.id} // 🔴 این آیدی را می‌فرستیم تا ردیف بداند کدام محصولات را لود کند
+              />
+            );
+          }
+
+          // اگر بنر گرافیکی بود
+          if (section.type === 'bento_grid') {
+            return <BentoGrid key={section.id} sectionId={section.id} />; // 🔴 این تغییر را اعمال کنید
+          }
+
+          // اگر بنر تمام‌عرض بود
+          if (section.type === 'full_banner') {
+            return <FullBanner key={section.id} sectionId={section.id} />;
+          }
+
+          // اگر اسلایدر فروشندگان/بوتیک‌ها بود
+          if (section.type === 'store_carousel') {
+            return (
+              <HorizontalBrandRow 
+                key={section.id}
+                category="Boutiques" 
+                title={section.title} 
+                sectionId={section.id} // 🔴 این آیدی معجزه می‌کند!
+              />
+            );
+          }
+
+          return null;
+        })}
         
-        {/* بقیه ردیف‌ها فعلاً به صورت هاردکد باقی می‌مانند تا بعداً آن‌ها را هم داینامیک کنیم */}
-        <DiscoveryRow title="Fresh Drops" products={NEW_ARRIVALS} />
-        <HorizontalBrandRow category="The Brand Archive" title="Featured Boutiques" brands={FEATURED_BRANDS} />
-        <DiscoveryRow title="The Considered Edit" products={CURATED_EDIT} />
-        <BentoGrid />
-        <HorizontalProductRow 
-          category="New Arrivals" 
-          title="The considered edit" 
-          products={PRODUCTS} 
-        />
-        <HorizontalBrandRow 
-          category="The Brand Archive" 
-          title="Featured Boutiques" 
-          brands={FEATURED_BRANDS} 
-        />
       </main>
 
       <Footer />
