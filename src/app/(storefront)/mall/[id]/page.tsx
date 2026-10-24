@@ -60,28 +60,31 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
         setMallInfo({
           id: mall.id,
           title: mall.name,
-          image: mall.cover_image || 'https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?q=80&w=2000&auto=format&fit=crop',
+          // پشتیبانی همزمان از ستون جدید (image_url) و قدیم (cover_image)
+          image: mall.image_url || mall.cover_image || 'https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?q=80&w=2000&auto=format&fit=crop',
         });
 
         const floorsArray = [];
-        const totalFloors = mall.total_floors || 1;
+        // پشتیبانی همزمان از ستون جدید (floors) و قدیم (total_floors)
+        const totalFloors = Number(mall.floors || mall.total_floors || 1);
 
         for (let i = 1; i <= totalFloors; i++) {
           const floorStores = (stores || [])
-            // 🔴 راز حل مشکل اینجاست: ستون floor_level را به عدد تبدیل می‌کنیم تا مقایسه درست انجام شود
-            .filter(store => Number(store.floor_level) === i)
+            // 🔴 بررسی همزمان ستون floor و floor_level (اگر هر دو خالی بودند، پیش‌فرض طبقه ۱ در نظر گرفته شود)
+            .filter(store => Number(store.floor ?? store.floor_level ?? 1) === i)
             .map(store => ({
               id: store.id,
-              name: store.brand_name || 'بدون نام',
-              tagline: store.tagline || '',
-              logo: store.cover_image_url || null,
+              name: store.name || store.brand_name || 'بدون نام',
+              tagline: store.category || store.tagline || '',
+              logo: store.logo_url || store.cover_image_url || null,
               products: (store.products || [])
-                .filter((p: any) => p.is_published)
+                // نمایش محصول اگر منتشر شده باشد یا وضعیتش active باشد
+                .filter((p: any) => p.is_published !== false && p.status !== 'inactive')
                 .map((p: any) => ({
                   id: p.id,
                   name: p.name,
                   price: p.price,
-                  image: p.image_url
+                  image: p.image_url || p.image
                 }))
             }));
 
