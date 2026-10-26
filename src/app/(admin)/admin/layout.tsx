@@ -6,10 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Building2, Store, Package, ShoppingCart, CreditCard,
   LayoutTemplate, Image as ImageIcon, Search, Menu, X,
-  ChevronRight, ChevronLeft, ExternalLink, Database
+  ChevronRight, ChevronLeft, ExternalLink, Database, BarChart
 } from 'lucide-react';
 import { createClient } from '../../../utils/supabase/client';
 import '../../globals.css';
+
 
 interface NavItem {
   href: string;
@@ -106,6 +107,7 @@ export default function AdminDashboardLayout({
         { href: '/admin', label: 'Overview', icon: Home, exact: true },
         { href: '/admin/malls', label: 'Malls', icon: Building2, count: counts.malls },
         { href: '/admin/stores', label: 'Stores & Vendors', icon: Store, count: counts.stores },
+        { href: '/admin/analytics', label: 'Sales & Analytics', icon: BarChart },
         { href: '/admin/products', label: 'Products Catalog', icon: Package, count: counts.products },
       ],
     },
@@ -120,7 +122,7 @@ export default function AdminDashboardLayout({
       title: 'Commerce & Finance',
       items: [
         { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-        { href: '/admin/payouts', label: 'Payouts', icon: CreditCard },
+        { href: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard }, 
       ],
     },
   ];
@@ -138,7 +140,8 @@ export default function AdminDashboardLayout({
     if (pathname.includes('/home-builder')) return 'Home Page Builder';
     if (pathname.includes('/banners')) return 'Campaign Banners';
     if (pathname.includes('/orders')) return 'Orders';
-    if (pathname.includes('/payouts')) return 'Payouts';
+    if (pathname.includes('/subscriptions')) return 'Subscriptions';
+    if (pathname.includes('/analytics')) return 'Sales & Performance Analytics';
     return 'Workspace';
   };
 

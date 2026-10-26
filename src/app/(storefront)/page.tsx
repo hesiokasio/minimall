@@ -20,6 +20,8 @@ export default async function Home() {
   const { data: sections } = await supabase
     .from('home_sections')
     .select('*')
+    .eq('is_published', true) // 🔴 فقط آنهایی که در پنل پابلیش شده‌اند
+    .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
   return (
