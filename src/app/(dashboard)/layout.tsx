@@ -3,79 +3,100 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, Settings } from 'lucide-react';
-import '../globals.css'; // 🔴 ایمپورت استایل‌های تیلویند
+import VendorSidebar from '../../components/layout/VendorSidebar';
+import { Search, ExternalLink, ChevronRight, Menu } from 'lucide-react';
+import '../globals.css'; // این مسیر برای شما به درستی کار کرده بود
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const pathname = usePathname();
 
-  const navItems = [
-    { name: 'Overview', href: '/dashboard', icon: Home },
-    { name: 'Products', href: '/dashboard/products', icon: Package },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-  ];
+  // تولید داینامیک عنوان صفحات در هدر (مثل Admin > Overview)
+  const getBreadcrumbTitle = () => {
+    if (!pathname || pathname === '/dashboard') return 'Overview';
+    if (pathname.includes('/products')) return 'Products';
+    if (pathname.includes('/orders')) return 'Orders';
+    if (pathname.includes('/inventory')) return 'Inventory';
+    if (pathname.includes('/analytics')) return 'Sales & Analytics';
+    if (pathname.includes('/earnings')) return 'Earnings & Payouts';
+    if (pathname.includes('/settings')) return 'Store Settings';
+    if (pathname.includes('/kyc')) return 'KYC Verification';
+    return 'Overview';
+  };
 
   return (
     <html lang="en">
-      <body className="antialiased bg-[#FDFDFC] text-[#111111] font-sans">
-        <div className="min-h-screen flex flex-col md:flex-row">
+      <body>
+        <div className="flex h-screen bg-[#FAFAFA] overflow-hidden font-sans antialiased text-zinc-900">
           
-          {/* سایدبار دسکتاپ */}
-          <aside className="w-64 border-r border-black/[0.04] bg-white p-6 hidden md:flex flex-col sticky top-0 h-screen z-40">
-            <div className="font-black text-xl tracking-tighter mb-12 select-none">
-              VENDOR<span className="text-black/30">.</span>
-            </div>
-            <nav className="flex flex-col gap-2">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-                return (
-                  <Link 
-                    key={item.name} 
-                    href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      isActive 
-                        ? 'bg-black text-white shadow-md' 
-                        : 'text-black/50 hover:bg-black/[0.03] hover:text-black'
-                    }`}
-                  >
-                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </aside>
+          {/* سایدبار */}
+          <VendorSidebar />
 
-          {/* محتوای اصلی */}
-          <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
-            {children}
-          </main>
+          {/* بخش اصلی */}
+          <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+            
+            {/* هدر بالای داشبورد - کپی دقیق از پنل ادمین */}
+            <header className="h-16 bg-white/90 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 shrink-0 z-20">
+              
+              {/* سمت چپ: منوی موبایل و بردکرامب */}
+              <div className="flex items-center gap-3 min-w-0">
+                <button className="md:hidden p-2 -ml-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                  <Menu className="w-5 h-5" />
+                </button>
 
-          {/* منوی پایین موبایل */}
-          <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-black/[0.05] z-50 px-6 py-3 flex justify-between items-center pb-safe shadow-[0_-8px_20px_-10px_rgba(0,0,0,0.05)]">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link 
-                  key={item.name} 
-                  href={item.href}
-                  className={`flex flex-col items-center justify-center gap-1 w-16 h-12 rounded-xl transition-all ${
-                    isActive ? 'text-black' : 'text-black/30 hover:text-black/50'
-                  }`}
-                >
-                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className={`text-[10px] font-bold transition-all duration-300 ${
-                    isActive ? 'opacity-100 translate-y-0' : 'opacity-0 h-0 overflow-hidden translate-y-2'
-                  }`}>
-                    {item.name}
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-500 truncate">
+                  <span>Dashboard</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span className="text-zinc-900 font-semibold truncate">{getBreadcrumbTitle()}</span>
+                </div>
+              </div>
+
+              {/* سمت راست: جستجو، دکمه سایت و باکس پروفایل */}
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                
+                {/* باکس جستجو با استایل کلید ⌘K */}
+                <button className="flex items-center justify-between gap-3 px-3 py-1.5 h-9 w-10 sm:w-64 lg:w-72 rounded-lg bg-zinc-100/80 hover:bg-zinc-100 border border-zinc-200/80 text-xs text-zinc-500 transition-colors">
+                  <span className="flex items-center gap-2 truncate">
+                    <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                    <span className="hidden sm:inline truncate">Search products, orders...</span>
                   </span>
-                </Link>
-              );
-            })}
-          </nav>
+                  <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white text-zinc-600 rounded border border-zinc-200">
+                    ⌘K
+                  </kbd>
+                </button>
 
+                {/* دکمه Live Storefront */}
+                <Link
+                  href="/"
+                  target="_blank"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-lg bg-white border border-zinc-200 hover:border-zinc-300 text-xs font-medium text-zinc-700 hover:text-zinc-900 transition-all shadow-2xs"
+                >
+                  <span>Live Storefront</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                </Link>
+
+                {/* باکس پروفایل کاربر */}
+                <div className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg border border-zinc-200/60 bg-white">
+                  <div className="w-7 h-7 rounded-full bg-zinc-900 text-white text-xs font-semibold flex items-center justify-center">
+                    VS
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <div className="text-xs font-medium text-zinc-900 leading-none">Vendor Shop</div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">Verified Partner</div>
+                  </div>
+                </div>
+
+              </div>
+            </header>
+
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+            
+          </div>
         </div>
       </body>
     </html>
