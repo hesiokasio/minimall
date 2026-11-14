@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Building2, Store, Package, ShoppingCart, CreditCard,
   LayoutTemplate, Image as ImageIcon, Search, Menu, X,
-  ChevronRight, ExternalLink, BarChart
+  ChevronRight, ExternalLink, BarChart, Ticket
 } from 'lucide-react';
 import { createClient } from '../../../utils/supabase/client';
 import '../../globals.css';
@@ -108,6 +108,7 @@ export default function AdminDashboardLayout({
         { href: '/admin/stores', label: 'Stores & Vendors', icon: Store, count: counts.stores },
         { href: '/admin/analytics', label: 'Sales & Analytics', icon: BarChart },
         { href: '/admin/products', label: 'Products Catalog', icon: Package, count: counts.products },
+        { href: '/admin/tickets', label: 'Support Tickets', icon: Ticket },
       ],
     },
     {
@@ -141,6 +142,7 @@ export default function AdminDashboardLayout({
     if (pathname.includes('/orders')) return 'Orders';
     if (pathname.includes('/subscriptions')) return 'Subscriptions';
     if (pathname.includes('/analytics')) return 'Sales & Performance Analytics';
+    if (pathname.includes('/tickets')) return 'Support Tickets';
     return 'Workspace';
   };
 

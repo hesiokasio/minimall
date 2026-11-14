@@ -105,6 +105,7 @@ export default function AdminSidebar({ navGroups }: AdminSidebarProps) {
         )}
 
         <button
+          suppressHydrationWarning
           onClick={() => setSidebarCollapsed((c) => !c)}
           className="w-full flex items-center justify-center gap-2 py-2 px-2.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
