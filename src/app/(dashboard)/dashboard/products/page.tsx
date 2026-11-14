@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Loader2 // آیکون لودینگ اضافه شد
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react';
 import SellerProductModal from '../../../../components/modals/SellerProductModal';
 import { createClient } from '../../../../utils/supabase/client'; // مسیر را چک کنید (احتمالا @/utils/supabase/client درست است)
@@ -233,15 +234,26 @@ export default function SellerProductsPage() {
                   {currentProducts.map((prod) => (
                     <tr key={prod.id} className="hover:bg-zinc-50/80 transition-colors group">
                       <td className="py-3 px-5">
-                        <div className="flex items-center gap-3">
-                          {/* نمایش اولین عکس از آرایه images */}
-                          <img src={prod.images?.[0] || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=100&q=80'} alt={prod.name} className="w-10 h-10 rounded-lg object-cover border border-zinc-200 shrink-0 bg-zinc-100" />
-                          <div>
-                            <div className="font-semibold text-zinc-900 group-hover:underline cursor-pointer">{prod.name}</div>
-                            <div className="text-[11px] text-zinc-500 font-mono mt-0.5">SKU: {prod.sku}</div>
-                          </div>
-                        </div>
-                      </td>
+  <div className="flex items-center gap-3">
+    
+    {prod.images?.[0] ? (
+      <img 
+        src={prod.images[0]} 
+        alt={prod.name} 
+        className="w-10 h-10 rounded-lg object-cover border border-zinc-200 shrink-0 bg-zinc-100" 
+      />
+    ) : (
+      <div className="w-10 h-10 rounded-lg border border-zinc-200 shrink-0 bg-zinc-100 flex items-center justify-center text-zinc-400">
+        <ImageIcon className="w-5 h-5" />
+      </div>
+    )}
+
+    <div>
+      <div className="font-semibold text-zinc-900 group-hover:underline cursor-pointer">{prod.name}</div>
+      <div className="text-[11px] text-zinc-500 font-mono mt-0.5">SKU: {prod.sku}</div>
+    </div>
+  </div>
+</td>
                       <td className="py-3 px-5 text-zinc-600">{prod.category}</td>
                       <td className="py-3 px-5 font-semibold text-zinc-900 tabular-nums">
                         {Number(prod.price).toLocaleString()}

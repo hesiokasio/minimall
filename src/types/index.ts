@@ -56,6 +56,7 @@ export interface Store {
   tagline: string;
   coverImage: string;
   products: Product[];
+  logo?: string | null;
 }
 
 export interface Floor {

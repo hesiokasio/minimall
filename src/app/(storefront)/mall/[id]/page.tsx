@@ -1,5 +1,5 @@
 'use client';
-
+export const dynamic = 'force-dynamic';
 import React, { use, useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -84,7 +84,7 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
                   id: p.id,
                   name: p.name,
                   price: p.price,
-                  image: p.image_url || p.image
+                  image: (p.images && p.images.length > 0) ? p.images[0] : (p.image_url || p.image)
                 }))
             }));
 

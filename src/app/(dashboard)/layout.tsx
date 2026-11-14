@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import VendorSidebar from '../../components/layout/VendorSidebar';
-import { Search, ExternalLink, ChevronRight, Menu } from 'lucide-react';
-import '../globals.css'; // این مسیر برای شما به درستی کار کرده بود
+import { Search, ExternalLink, ChevronRight, Menu, AlertCircle } from 'lucide-react';
+import '../globals.css';
+import { createClient } from '../../utils/supabase/client'; // نکته: اگر مسیر کلاینت سوپابیس شما فرق دارد، این خط را اصلاح کنید
 
 export default function DashboardLayout({
   children,
@@ -13,8 +14,34 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname();
+  const supabase = createClient();
+  
+  // استیت برای نگهداری وضعیت اشتراک (null یعنی در حال بررسی)
+  const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
 
-  // تولید داینامیک عنوان صفحات در هدر (مثل Admin > Overview)
+  useEffect(() => {
+    const checkSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // جستجو در جدول اشتراک‌ها برای پیدا کردن اشتراک فعال این کاربر
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('status')
+          .eq('vendor_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (data) {
+          setIsSubscribed(true); // اشتراک فعال دارد
+        } else {
+          setIsSubscribed(false); // اشتراک ندارد
+        }
+      }
+    };
+
+    checkSubscription();
+  }, []);
+
   const getBreadcrumbTitle = () => {
     if (!pathname || pathname === '/dashboard') return 'Overview';
     if (pathname.includes('/products')) return 'Products';
@@ -32,16 +59,24 @@ export default function DashboardLayout({
       <body>
         <div className="flex h-screen bg-[#FAFAFA] overflow-hidden font-sans antialiased text-zinc-900">
           
-          {/* سایدبار */}
           <VendorSidebar />
 
-          {/* بخش اصلی */}
           <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
             
-            {/* هدر بالای داشبورد - کپی دقیق از پنل ادمین */}
+            {/* نمایش شرطی بنر: فقط اگر بررسی تمام شده بود (null نبود) و کاربر اشتراک نداشت نشانش بده */}
+            {isSubscribed === false && (
+              <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-center gap-2 sm:px-6 z-30 shrink-0 transition-all duration-300">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <p className="text-amber-800 text-xs sm:text-sm font-medium text-center">
+                  Your store is currently offline and hidden from customers. To activate and start selling,{' '}
+                  <Link href="/dashboard/billing" className="font-bold underline text-amber-900 hover:text-amber-700 transition-colors">
+                    upgrade your subscription
+                  </Link>.
+                </p>
+              </div>
+            )}
+
             <header className="h-16 bg-white/90 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 shrink-0 z-20">
-              
-              {/* سمت چپ: منوی موبایل و بردکرامب */}
               <div className="flex items-center gap-3 min-w-0">
                 <button className="md:hidden p-2 -ml-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
                   <Menu className="w-5 h-5" />
@@ -54,10 +89,7 @@ export default function DashboardLayout({
                 </div>
               </div>
 
-              {/* سمت راست: جستجو، دکمه سایت و باکس پروفایل */}
               <div className="flex items-center gap-2.5 sm:gap-3">
-                
-                {/* باکس جستجو با استایل کلید ⌘K */}
                 <button className="flex items-center justify-between gap-3 px-3 py-1.5 h-9 w-10 sm:w-64 lg:w-72 rounded-lg bg-zinc-100/80 hover:bg-zinc-100 border border-zinc-200/80 text-xs text-zinc-500 transition-colors">
                   <span className="flex items-center gap-2 truncate">
                     <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
@@ -68,17 +100,11 @@ export default function DashboardLayout({
                   </kbd>
                 </button>
 
-                {/* دکمه Live Storefront */}
-                <Link
-                  href="/"
-                  target="_blank"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-lg bg-white border border-zinc-200 hover:border-zinc-300 text-xs font-medium text-zinc-700 hover:text-zinc-900 transition-all shadow-2xs"
-                >
+                <Link href="/" target="_blank" className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-lg bg-white border border-zinc-200 hover:border-zinc-300 text-xs font-medium text-zinc-700 hover:text-zinc-900 transition-all shadow-2xs">
                   <span>Live Storefront</span>
                   <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
                 </Link>
 
-                {/* باکس پروفایل کاربر */}
                 <div className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg border border-zinc-200/60 bg-white">
                   <div className="w-7 h-7 rounded-full bg-zinc-900 text-white text-xs font-semibold flex items-center justify-center">
                     VS
@@ -88,7 +114,6 @@ export default function DashboardLayout({
                     <div className="text-[10px] text-zinc-500 mt-0.5">Verified Partner</div>
                   </div>
                 </div>
-
               </div>
             </header>
 

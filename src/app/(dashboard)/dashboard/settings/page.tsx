@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   AlertTriangle,
   FileText,
-  Loader2
+  Loader2,
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
 
@@ -22,29 +24,36 @@ export default function SellerSettingsPage() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('store'); // 'store' | 'account' | 'verification'
+  const [activeTab, setActiveTab] = useState('store'); 
 
   const [storeId, setStoreId] = useState<string | null>(null);
+  
+  // استیت جدید برای لیست پاساژها
+  const [malls, setMalls] = useState<any[]>([]);
 
-  // Store Profile State
+  // Store Profile State (اضافه شدن فیلدهای مکانی)
   const [storeForm, setStoreForm] = useState({
     storeName: '',
     phone: '',
     address: '',
     description: '',
-    logo: '' // URL of the logo
+    logo: '',
+    mall_id: '',
+    floor: '',
+    unit_number: ''
   });
+
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
   // Account State
   const [accountForm, setAccountForm] = useState({
     ownerName: '',
-    email: 'hesam@example.com', // این فعلا هاردکد است تا سیستم لاگین ساخته شود
+    email: '', 
     currentPassword: '',
     newPassword: ''
   });
 
-  // KYC (Verification) State
+  // KYC State
   const [kycForm, setKycForm] = useState({
     legalName: '',
     nationalId: '',
@@ -54,14 +63,36 @@ export default function SellerSettingsPage() {
   });
   const [kycFile, setKycFile] = useState<File | null>(null);
 
-  // ۱. دریافت اطلاعات هنگام لود شدن صفحه
   useEffect(() => {
     fetchStoreData();
+    fetchMalls(); // فراخوانی پاساژها هنگام لود صفحه
   }, []);
+
+  // واکشی لیست پاساژها از دیتابیس
+  const fetchMalls = async () => {
+    const { data, error } = await supabase.from('malls').select('id, name');
+    if (!error && data) {
+      setMalls(data);
+    }
+  };
 
   const fetchStoreData = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('stores').select('*').limit(1).single();
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     
     if (data) {
       setStoreId(data.id);
@@ -71,16 +102,21 @@ export default function SellerSettingsPage() {
         phone: data.phone || '',
         address: data.address || '',
         description: data.description || '',
-        logo: data.logo_url || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=150&q=80'
+        logo: data.logo_url || '',
+        mall_id: data.mall_id || '', // دریافت پاساژ
+        floor: data.floor === 0 ? 'GF' : (data.floor ? String(data.floor) : ''), // دریافت طبقه
+        unit_number: data.unit_number || '' // دریافت شماره واحد
       });
 
-      setAccountForm(prev => ({
-        ...prev,
-        ownerName: data.owner_name || ''
-      }));
+      setAccountForm({
+        ownerName: data.owner_name || '',
+        email: user.email || '', 
+        currentPassword: '',
+        newPassword: ''
+      });
 
       setKycForm({
-        legalName: data.owner_name || '', // نام صاحب و نام قانونی یکی در نظر گرفته شده
+        legalName: data.owner_name || '',
         nationalId: data.national_id || '',
         status: data.kyc_status || 'unverified',
         documentName: data.kyc_document_url ? 'Document Uploaded' : '',
@@ -105,12 +141,11 @@ export default function SellerSettingsPage() {
       setKycForm({ 
         ...kycForm, 
         documentName: file.name,
-        status: 'pending' // بلافاصله بعد از انتخاب فایل، وضعیت به pending تغییر می‌کند (ظاهری)
+        status: 'pending'
       });
     }
   };
 
-  // ۲. ذخیره اطلاعات در سرور
   const handleSave = async () => {
     if (!storeId) return alert('Store not found!');
     setIsSaving(true);
@@ -119,7 +154,6 @@ export default function SellerSettingsPage() {
       let finalLogoUrl = storeForm.logo;
       let finalKycUrl = kycForm.documentUrl;
 
-      // آپلود لوگو اگر تغییر کرده باشد
       if (logoFile) {
         const fileExt = logoFile.name.split('.').pop();
         const fileName = `logo-${Date.now()}.${fileExt}`;
@@ -129,7 +163,6 @@ export default function SellerSettingsPage() {
         finalLogoUrl = urlData.publicUrl;
       }
 
-      // آپلود مدرک KYC اگر تغییر کرده باشد
       if (kycFile) {
         const fileExt = kycFile.name.split('.').pop();
         const fileName = `kyc-${Date.now()}.${fileExt}`;
@@ -139,7 +172,6 @@ export default function SellerSettingsPage() {
         finalKycUrl = urlData.publicUrl;
       }
 
-      // آپدیت دیتابیس با تمام اطلاعات جدید
       const { error: updateError } = await supabase
         .from('stores')
         .update({
@@ -151,16 +183,21 @@ export default function SellerSettingsPage() {
           owner_name: accountForm.ownerName,
           national_id: kycForm.nationalId,
           kyc_document_url: finalKycUrl,
-          kyc_status: kycFile ? 'pending' : kycForm.status // اگر مدرک جدید داده، میره تو صف بررسی
+          kyc_status: kycFile ? 'pending' : kycForm.status,
+          mall_id: storeForm.mall_id || null,
+          floor: storeForm.floor === 'GF' ? 0 : Number(storeForm.floor),
+          floor_level: storeForm.floor,
+          unit_number: storeForm.unit_number,
+          status: 'active'
         })
         .eq('id', storeId);
 
       if (updateError) throw updateError;
 
       alert('تنظیمات با موفقیت ذخیره شد!');
-      setLogoFile(null);
-      setKycFile(null);
-      fetchStoreData(); // رفرش اطلاعات از سرور
+      
+      // 🔴 کدهای اضافی و تداخل‌سازِ بعد از این خط حذف شدند
+      window.location.reload();
 
     } catch (error: any) {
       alert('خطا در ذخیره اطلاعات: ' + error.message);
@@ -241,11 +278,38 @@ export default function SellerSettingsPage() {
             <div className="space-y-4">
               <h2 className="text-sm font-bold text-zinc-900">Store Logo</h2>
               <div className="flex items-center gap-5">
-                <img src={storeForm.logo} alt="Store Logo" className="w-20 h-20 rounded-xl object-cover border border-zinc-200" />
+                
+                {/* نمایش لوگوی واقعی یا آیکون پیش‌فرض */}
+                {storeForm.logo ? (
+                  <img src={storeForm.logo} alt="Store Logo" className="w-20 h-20 rounded-xl object-cover border border-zinc-200 shrink-0 bg-white" />
+                ) : (
+                  <div className="w-20 h-20 rounded-xl border border-zinc-200 bg-zinc-100 flex items-center justify-center text-zinc-400 shrink-0">
+                    <Store className="w-8 h-8" />
+                  </div>
+                )}
+                
                 <div>
-                  <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
-                    <UploadCloud className="w-3.5 h-3.5" /> Change Logo
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* دکمه تغییر لوگو */}
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
+                      <UploadCloud className="w-3.5 h-3.5" /> Change Logo
+                    </button>
+
+                    {/* 🔴 دکمه حذف لوگو (فقط زمانی نمایش داده می‌شود که لوگویی وجود داشته باشد) */}
+                    {storeForm.logo && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setStoreForm(prev => ({ ...prev, logo: '' })); // پاک کردن از استیت
+                          setLogoFile(null); // پاک کردن فایل آپلود شده (اگر وجود داشت)
+                        }} 
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Remove
+                      </button>
+                    )}
+                  </div>
+                  
                   <p className="text-[11px] text-zinc-500 mt-2">Recommended size: 400x400px (JPG or PNG).</p>
                   <input type="file" ref={fileInputRef} onChange={handleLogoUpload} accept="image/*" className="hidden" />
                 </div>
@@ -267,6 +331,60 @@ export default function SellerSettingsPage() {
                   <label className={labelClass}>Store Address (Optional)</label>
                   <input type="text" value={storeForm.address} onChange={(e) => setStoreForm({ ...storeForm, address: e.target.value })} className={inputClass} dir="rtl" />
                 </div>
+                
+                {/* بخش جدید: انتخاب پاساژ و طبقه */}
+                <div className="pt-2 border-t border-zinc-100">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MapPin className="w-4 h-4 text-zinc-400" />
+                    <h3 className="text-sm font-bold text-zinc-900">Store Location in Mall</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div>
+                      <label className={labelClass}>Shopping Mall</label>
+                      <select 
+                        value={storeForm.mall_id} 
+                        onChange={(e) => setStoreForm({...storeForm, mall_id: e.target.value})}
+                        className={inputClass}
+                      >
+                        <option value="">Select a Mall...</option>
+                        {malls.map((mall) => (
+                          <option key={mall.id} value={mall.id}>
+                            {mall.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Floor Level</label>
+                      <select 
+                        value={storeForm.floor} 
+                        onChange={(e) => setStoreForm({...storeForm, floor: e.target.value})}
+                        className={inputClass}
+                      >
+                        <option value="">Select Floor...</option>
+                        <option value="GF">Ground Floor (همکف)</option>
+                        <option value="1">1st Floor</option>
+                        <option value="2">2nd Floor</option>
+                        <option value="3">3rd Floor</option>
+                        <option value="-1">Basement (-1)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Unit Number</label>
+                      <input 
+                        type="text" 
+                        value={storeForm.unit_number} 
+                        onChange={(e) => setStoreForm({...storeForm, unit_number: e.target.value})}
+                        placeholder="e.g. 142"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className={labelClass}>Store Description</label>
                   <textarea rows={4} value={storeForm.description} onChange={(e) => setStoreForm({ ...storeForm, description: e.target.value })} className="w-full p-3 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-400 transition-colors resize-none" />

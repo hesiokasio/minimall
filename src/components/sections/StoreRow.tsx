@@ -2,10 +2,8 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Plus, Image as ImageIcon } from 'lucide-react';
-import Image from 'next/image'; // 🔴 اضافه شد
+import { ArrowRight, Plus, Image as ImageIcon, Store as StoreIcon } from 'lucide-react';
 import { Store, Product } from '../../types';
-
 
 interface StoreRowProps {
   store: Store;
@@ -20,53 +18,28 @@ function ProductCard({
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
-  // محاسبه سیستم تخفیف
-  const basePrice =
-    typeof product.price === 'number'
-      ? product.price
-      : parseInt(product.price.replace('$', ''), 10);
-  const isDiscounted = index === 1 || index === 4;
-  const originalPriceNum = isDiscounted ? Math.floor(basePrice * 1.35) : basePrice;
-  const originalPrice = isDiscounted ? `$${originalPriceNum}` : null;
-  const discountPercent = isDiscounted
-    ? Math.round(((originalPriceNum - basePrice) / originalPriceNum) * 100)
-    : 0;
-
   return (
     <motion.div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className="shrink-0 w-[33vw] sm:w-[155px] md:w-[170px] flex flex-col group select-none cursor-pointer"
     >
-      {/* قاب عکس با نسبت مربع فشرده و ارتفاع کنترل‌شده */}
+      {/* قاب عکس با نسبت مربع فشرده */}
       <div className="w-full aspect-square relative rounded-xl md:rounded-2xl overflow-hidden bg-[#EAE8E3] border border-black/[0.04] transition-all duration-500 ease-out group-hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.08)]">
         
-        {/* لیبل اصالت / NEW */}
-        {index === 0 && (
-          <div className="absolute top-2 left-2 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md border border-black/5 shadow-sm">
-            <span className="w-1 h-1 rounded-full bg-[#c73b3b]" />
-            <span className="text-[7px] font-semibold uppercase tracking-widest text-black/80">
-              New
-            </span>
+        {/* استفاده از تگ img استاندارد برای دور زدن محدودیت امنیتی Next.js */}
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 pointer-events-none will-change-transform transform-gpu"
+            draggable={false}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#EAE8E3] opacity-50 group-hover:opacity-80 transition-opacity duration-500">
+            <ImageIcon size={28} strokeWidth={1.5} className="text-black/20" />
           </div>
         )}
-
-        {/* بج تخفیف */}
-        {isDiscounted && (
-          <div className="absolute top-2 right-2 z-20 px-2 py-0.5 md:px-2.5 md:py-1 rounded-md bg-[#c73b3b] text-white text-[9px] md:text-[11px] font-black tracking-wider shadow-md leading-none">
-            -{discountPercent}%
-          </div>
-        )}
-
-        {/* 🔴 عکس محصول (تبدیل به Image هوشمند + انتقال انیمیشن به CSS) */}
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 768px) 33vw, 170px"
-          className="object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 pointer-events-none will-change-transform transform-gpu"
-          draggable={false}
-        />
 
         {/* دکمه اکشن سریع */}
         <div className="absolute bottom-2 right-2 z-20">
@@ -85,27 +58,16 @@ function ProductCard({
         </div>
       </div>
 
-      {/* اطلاعات فشرده محصول در حداقل ارتفاع */}
+      {/* اطلاعات فشرده محصول بدون تخفیف‌های فیک */}
       <div className="mt-2 px-0.5 flex flex-col gap-0.5">
         <h4 className="text-black/90 text-[10px] md:text-[11px] font-medium tracking-tight truncate group-hover:text-black transition-colors">
           {product.name}
         </h4>
 
         <div className="flex items-baseline gap-1.5">
-          {isDiscounted ? (
-            <>
-              <span className="text-[#c73b3b] font-bold text-[11px] md:text-[12px] leading-none">
-                {product.price}
-              </span>
-              <span className="text-black/35 line-through text-[9px] md:text-[10px] font-normal leading-none">
-                {originalPrice}
-              </span>
-            </>
-          ) : (
-            <span className="text-black/85 font-semibold text-[11px] md:text-[12px] leading-none">
-              {product.price}
-            </span>
-          )}
+          <span className="text-black/85 font-semibold text-[11px] md:text-[12px] leading-none">
+            {product.price} تومان
+          </span>
         </div>
       </div>
     </motion.div>
@@ -133,15 +95,38 @@ export default function StoreRow({ store }: StoreRowProps) {
       className="w-full py-3.5 pl-4 md:py-4 md:pl-12 lg:pl-20 border-b border-black/[0.05] relative z-10"
     >
       {/* هدر فشرده و شیک فروشگاه */}
-      <div className="mb-2.5 pr-4 md:pr-20 flex justify-between items-end">
-        <div>
-          <h3 className="text-base md:text-xl font-bold uppercase tracking-tighter text-black leading-none">
-            {store.name}
-          </h3>
-          <p className="text-black/45 text-[7.5px] md:text-[8.5px] tracking-[0.2em] uppercase mt-0.5">
-            {store.tagline}
-          </p>
+      <div className="mb-3 pr-4 md:pr-20 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          
+          {/* شرط اصلی: آیا فروشگاه لوگو دارد؟ */}
+          {store.logo ? (
+            /* 🟢 حالت اول: لوگو دارد -> فقط لوگو نمایش داده می‌شود */
+            <img 
+              src={store.logo} 
+              alt={store.name} 
+              className="h-7 md:h-9 w-auto object-contain mix-blend-multiply shrink-0"
+              draggable={false}
+            />
+          ) : (
+            /* 🟠 حالت دوم: لوگو ندارد -> آیکون دیفالت + اسم + تگ‌لاین */
+            <>
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-md bg-black/5 flex items-center justify-center shrink-0">
+                <StoreIcon className="w-4 h-4 text-black/40" />
+              </div>
+              
+              <div className="flex flex-col justify-center">
+                <h3 className="text-base md:text-xl font-bold uppercase tracking-tighter text-black leading-none mb-1.5">
+                  {store.name}
+                </h3>
+                <p className="text-black/45 text-[7.5px] md:text-[8.5px] tracking-[0.2em] uppercase leading-none">
+                  {store.tagline || 'Verified Store'}
+                </p>
+              </div>
+            </>
+          )}
+
         </div>
+        
         <div className="hidden md:flex items-center gap-1.5 text-[9px] text-black/40 uppercase tracking-[0.18em]">
           <span>View All</span> <ArrowRight size={11} />
         </div>
@@ -158,18 +143,16 @@ export default function StoreRow({ store }: StoreRowProps) {
           dragElastic={0.12}
           className="flex gap-3 sm:gap-3.5 md:gap-4 pb-2 items-start"
         >
-          {/* ۱. کاور ورودی برند (تراز دقیق با ارتفاع کارت‌ها) */}
-          {/* ۱. کاور ورودی برند (تراز دقیق با ارتفاع کارت‌ها) */}
+          {/* ۱. کاور ورودی برند */}
           <div className="shrink-0 w-[38vw] sm:w-[180px] md:w-[200px] aspect-square relative rounded-xl md:rounded-2xl overflow-hidden group isolate bg-black shadow-[0_8px_20px_-8px_rgba(0,0,0,0.18)] flex items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a]">
-            {/* چک می‌کنیم آیا عکس وجود دارد یا نه */}
+            {/* چک می‌کنیم آیا عکس کاور وجود دارد یا نه */}
             {store.coverImage ? (
               <>
-                <Image
+                {/* 🔴 اینجا هم از img استفاده شد تا ارور Next.js ندهد */}
+                <img
                   src={store.coverImage}
                   alt={store.name}
-                  fill
-                  sizes="(max-width: 768px) 38vw, 200px"
-                  className="object-cover opacity-70 transition-transform duration-700 group-hover:scale-105 pointer-events-none will-change-transform transform-gpu"
+                  className="w-full h-full object-cover opacity-70 transition-transform duration-700 group-hover:scale-105 pointer-events-none will-change-transform transform-gpu"
                   draggable={false}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
@@ -177,7 +160,7 @@ export default function StoreRow({ store }: StoreRowProps) {
             ) : (
               // اگر عکس نداشت، این آیکون شیک نشان داده می‌شود
               <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 group-hover:opacity-60 transition-opacity duration-300">
-                <ImageIcon size={32} strokeWidth={1} className="text-white mb-2" />
+                <StoreIcon size={32} strokeWidth={1} className="text-white mb-2" />
                 <span className="text-[10px] text-white/70 font-mono uppercase tracking-widest">{store.name}</span>
               </div>
             )}
@@ -192,7 +175,7 @@ export default function StoreRow({ store }: StoreRowProps) {
             </div>
           </div>
 
-          {/* ۲. کارت‌های محصولات با ارتفاع فشرده */}
+          {/* ۲. کارت‌های محصولات */}
           {store.products.map((product, index) => (
             <ProductCard
               key={product.id}
