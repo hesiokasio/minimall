@@ -1,27 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-
-// دیتای تستی تیکت‌ها (مشابه تصویر)
-const MOCK_TICKETS = [
-  {
-    id: 'TCK-381',
-    subject: 'Signage approval timeline for Maison Margaux (Unit 118)',
-    status: 'in_progress',
-    lastUpdate: 'Mall Concierge: Architectural review completes this Friday.',
-    reference: 'STR-118',
-    date: '2025-02-20'
-  },
-  {
-    id: 'TCK-379',
-    subject: 'Request for bulk upload feature on product catalog',
-    status: 'resolved',
-    lastUpdate: 'Support: The feature has been enabled for your account.',
-    reference: 'SYS-FEAT',
-    date: '2025-02-18'
-  }
-];
+import React, { useState, useEffect } from 'react';
+import { Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { createClient } from '../../../../utils/supabase/client';
 
 const TicketStatusBadge = ({ status }: { status: string }) => {
   if (status === 'in_progress') {
@@ -49,24 +30,79 @@ const TicketStatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function SellerSupportPage() {
+  const supabase = createClient();
+  
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [form, setForm] = useState({
     subject: '',
     reference: '',
     description: ''
   });
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // واکشی تیکت‌های مربوط به همین کاربر هنگام لود صفحه
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const fetchTickets = async () => {
+    setIsLoading(true);
+    
+    // ۱. گرفتن یوزر فعلی
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // ۲. گرفتن فقط تیکت‌های همین یوزر
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('vendor_id', user.id) // فیلتر امنیتی
+      .order('created_at', { ascending: false });
+
+    if (data) setTickets(data);
+    if (error) console.error('Error fetching tickets:', error);
+    
+    setIsLoading(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.subject || !form.description) return alert('Subject and description are required.');
     
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('You must be logged in to submit a ticket.');
+        return;
+      }
+
+      // ارسال تیکت جدید به دیتابیس با آیدی همین یوزر
+      const { error } = await supabase
+        .from('support_tickets')
+        .insert([{
+          vendor_id: user.id, // ثبت با آیدی واقعی کاربر
+          subject: form.subject,
+          reference: form.reference,
+          description: form.description,
+          status: 'open'
+        }]);
+
+      if (error) throw error;
+
       alert('Support ticket submitted successfully!');
       setForm({ subject: '', reference: '', description: '' });
-    }, 1000);
+      
+      // آپدیت کردن لیست تیکت‌ها برای نمایش تیکت جدید
+      fetchTickets();
+      
+    } catch (err: any) {
+      alert('Error submitting ticket: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass = "w-full h-[38px] px-3 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-400 transition-colors";
@@ -127,38 +163,52 @@ export default function SellerSupportPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-lg bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 transition-colors disabled:opacity-70 mt-2"
+              className="px-5 py-2.5 rounded-lg bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 transition-colors disabled:opacity-70 mt-2 flex items-center justify-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? 'Submitting...' : 'Submit Support Ticket'}
             </button>
           </form>
         </div>
 
         {/* Right Card: Support Tickets List */}
-        <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-sm h-fit">
+        <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-sm h-fit flex flex-col min-h-[300px]">
           <h2 className="text-sm font-bold text-zinc-900 mb-6">Your Support Tickets</h2>
           
-          <div className="space-y-5">
-            {MOCK_TICKETS.map((ticket, index) => (
-              <div 
-                key={ticket.id} 
-                className={`pb-5 ${index !== MOCK_TICKETS.length - 1 ? 'border-b border-zinc-100' : ''}`}
-              >
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <h3 className="text-sm font-semibold text-zinc-900 leading-snug">
-                    {ticket.subject}
-                  </h3>
-                  <TicketStatusBadge status={ticket.status} />
+          {isLoading ? (
+             <div className="flex-1 flex flex-col items-center justify-center py-10">
+               <Loader2 className="w-8 h-8 text-zinc-400 animate-spin mb-3" />
+               <p className="text-xs font-medium text-zinc-500">Loading your tickets...</p>
+             </div>
+          ) : tickets.length === 0 ? (
+             <div className="flex-1 flex flex-col items-center justify-center py-10 text-center">
+               <AlertCircle className="w-8 h-8 text-zinc-300 mb-3" />
+               <p className="text-sm font-medium text-zinc-900">No tickets found</p>
+               <p className="text-xs text-zinc-500 mt-1">You haven't submitted any support requests yet.</p>
+             </div>
+          ) : (
+            <div className="space-y-5">
+              {tickets.map((ticket, index) => (
+                <div 
+                  key={ticket.id} 
+                  className={`pb-5 ${index !== tickets.length - 1 ? 'border-b border-zinc-100' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <h3 className="text-sm font-semibold text-zinc-900 leading-snug">
+                      {ticket.subject}
+                    </h3>
+                    <TicketStatusBadge status={ticket.status} />
+                  </div>
+                  <p className="text-xs text-zinc-600 mb-2 truncate">
+                    {ticket.description}
+                  </p>
+                  <div className="text-[11px] text-zinc-400 font-mono">
+                    Ref: {ticket.reference || 'N/A'} • {new Date(ticket.created_at).toLocaleDateString()}
+                  </div>
                 </div>
-                <p className="text-xs text-zinc-600 mb-2">
-                  {ticket.lastUpdate}
-                </p>
-                <div className="text-[11px] text-zinc-400 font-mono">
-                  {ticket.id} • Ref: {ticket.reference} • {ticket.date}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

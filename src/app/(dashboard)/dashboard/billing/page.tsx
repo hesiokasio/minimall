@@ -58,8 +58,8 @@ export default function BillingPage() {
       const endDate = new Date();
       endDate.setDate(startDate.getDate() + plan.durationDays);
 
-      // ثبت اشتراک جدید در دیتابیس با وضعیت active
-      const { error } = await supabase
+      // ۱. ثبت اشتراک جدید در جدول subscriptions
+      const { error: subError } = await supabase
         .from('subscriptions')
         .insert([{
           vendor_id: user.id,
@@ -69,10 +69,21 @@ export default function BillingPage() {
           end_date: endDate.toISOString()
         }]);
 
-      if (error) throw error;
+      if (subError) throw subError;
 
-      // رفرش کردن صفحه برای اعمال تغییرات و حذف بنر زرد رنگ
-      window.location.href = '/'; 
+      // ۲. فعال کردن وضعیت فروشگاه در جدول stores 
+      const { error: storeError } = await supabase
+        .from('stores')
+        .update({ status: 'active' }) // تغییر وضعیت به فعال
+        .eq('owner_id', user.id);     // فقط برای فروشگاهِ همین کاربر
+
+      if (storeError) {
+        console.error('Error updating store status:', storeError);
+        // به کاربر پیام موفقیت خرید را می‌دهیم اما لاگ خطا را برای خودمان نگه می‌داریم
+      }
+
+      // ۳. هدایت به داشبورد و رفرش برای حذف بنر آفلاین
+      window.location.href = '/dashboard'; 
 
     } catch (error: any) {
       console.error('Error activating subscription:', error.message);

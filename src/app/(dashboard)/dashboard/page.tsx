@@ -56,17 +56,26 @@ export default function OverviewPage() {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      // ۱. پیدا کردن آیدی فروشگاه
-      const { data: storeData } = await supabase.from('stores').select('id').limit(1).single();
+      // ۱. گرفتن یوزر واقعی که الان لاگین کرده
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // ۲. پیدا کردن آیدی فروشگاهِ مختص به همین یوزر
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('owner_id', user.id) // 🟢 فیلتر حیاتی: فقط فروشگاهِ من!
+        .limit(1)
+        .maybeSingle(); // 🟢 استفاده از maybeSingle برای جلوگیری از ارور
       
       if (storeData) {
-        // ۲. دریافت تعداد کل محصولات این فروشگاه
+        // ۳. دریافت تعداد کل محصولات این فروشگاه
         const { count: productsCount } = await supabase
           .from('products')
           .select('*', { count: 'exact', head: true })
           .eq('store_id', storeData.id);
 
-        // ۳. دریافت تمام سفارشات برای محاسبه درآمد و تعداد
+        // ۴. دریافت تمام سفارشات برای محاسبه درآمد و تعداد
         const { data: ordersData } = await supabase
           .from('orders')
           .select('*')
@@ -78,6 +87,7 @@ export default function OverviewPage() {
           const revenue = ordersData
           .filter((o: any) => o.status !== 'cancelled')
           .reduce((sum: number, order: any) => sum + Number(order.total_price), 0);
+          
           setStats({
             totalRevenue: revenue,
             totalOrders: ordersData.length,
@@ -87,6 +97,10 @@ export default function OverviewPage() {
           // جدا کردن ۵ سفارش آخر برای نمایش در جدول
           setRecentOrders(ordersData.slice(0, 5));
         }
+      } else {
+        // اگر فروشگاهی پیدا نشد، آمار را صفر نشان بده
+        setStats({ totalRevenue: 0, totalOrders: 0, totalProducts: 0 });
+        setRecentOrders([]);
       }
     } catch (error) {
       console.error('Error fetching overview data:', error);

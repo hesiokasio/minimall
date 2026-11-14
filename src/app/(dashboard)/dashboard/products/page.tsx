@@ -60,16 +60,36 @@ export default function SellerProductsPage() {
 
   const fetchProducts = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
+    
+    // ۱. گرفتن یوزر فعلی
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-    if (error) {
-      console.error('Error fetching products:', error);
+    // ۲. پیدا کردن فروشگاهِ اختصاصی همین یوزر
+    const { data: storeData } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('owner_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (storeData) {
+      // ۳. فقط محصولاتی را بگیر که مال این فروشگاه است
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('store_id', storeData.id) // 🟢 فیلتر جادویی
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching products:', error);
+      } else {
+        setProducts(data || []);
+      }
     } else {
-      setProducts(data || []);
+      setProducts([]); // اگر فروشگاه نداشت، لیست خالی نشان بده
     }
+    
     setIsLoading(false);
   };
 
@@ -91,31 +111,37 @@ export default function SellerProductsPage() {
 
   // ۲. ارسال اطلاعات به سرور هنگام ثبت محصول جدید
   const handleAddProduct = async (newProduct: any) => {
-    // چون هنوز سیستم لاگین نداریم، یک آیدی تستی معتبر برای فروشنده می‌فرستیم
-    const dummyVendorId = '11111111-1111-1111-1111-111111111111';
-    
     try {
-      // پیدا کردن یک فروشگاه معتبر از دیتابیس برای جلوگیری از خطای foreign key
-      const { data: storeData, error: storeError } = await supabase.from('stores').select('id').limit(1).single();
+      // ۱. گرفتن یوزر واقعی
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return alert('شما وارد نشده‌اید!');
+
+      // ۲. پیدا کردن فروشگاهِ واقعی این یوزر (نه هر فروشگاهی!)
+      const { data: storeData, error: storeError } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('owner_id', user.id) // 🟢 فیلتر برای پیدا کردن فروشگاه صاحب اکانت
+        .limit(1)
+        .maybeSingle();
       
       if (storeError || !storeData) {
-        alert('فروشگاهی در دیتابیس یافت نشد! ابتدا باید یک فروشگاه ثبت کنید.');
+        alert('ابتدا باید اطلاعات فروشگاه خود را در بخش تنظیمات ذخیره کنید.');
         return;
       }
 
-      // آماده‌سازی اطلاعات برای دیتابیس (تبدیل عکس به آرایه، استرینگ به عدد و ...)
+      // ۳. ثبت با آیدی‌های واقعی
       const productToInsert = {
-        vendor_id: dummyVendorId,
-        store_id: storeData.id, 
+        vendor_id: user.id, // 🟢 استفاده از آیدی واقعی یوزر
+        store_id: storeData.id, // 🟢 استفاده از آیدی فروشگاه همین یوزر
         name: newProduct.name,
-        sku: newProduct.sku || `SKU-${Math.floor(Math.random() * 10000)}`, // در صورت خالی بودن SKU از مودال
+        sku: newProduct.sku || `SKU-${Math.floor(Math.random() * 10000)}`,
         category: newProduct.category || 'Uncategorized',
         price: Number(newProduct.price) || 0,
         stock: Number(newProduct.stock) || 0,
         size: newProduct.size || '',
         color: newProduct.color || '',
         status: newProduct.status || 'draft',
-        images: newProduct.image ? [newProduct.image] : [] // دیتابیس آرایه متنی می‌خواهد
+        images: newProduct.image ? [newProduct.image] : []
       };
 
       const { data, error } = await supabase
@@ -126,7 +152,6 @@ export default function SellerProductsPage() {
       if (error) {
         throw error;
       } else if (data) {
-        // اضافه کردن محصول جدید به استیت برای آپدیت شدن در لحظه
         setProducts([data[0], ...products]);
         setIsModalOpen(false);
       }

@@ -53,11 +53,20 @@ export default function SellerOrdersPage() {
   const fetchOrders = async () => {
     setIsLoading(true);
     
-    // اول آیدی فروشگاه را می‌گیریم
-    const { data: storeData } = await supabase.from('stores').select('id').limit(1).single();
+    // ۱. گرفتن یوزر فعلی
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // ۲. پیدا کردن فروشگاهِ اختصاصی همین یوزر
+    const { data: storeData } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('owner_id', user.id) // 🟢 فیلتر امنیتی: فقط فروشگاه من
+      .limit(1)
+      .maybeSingle();
     
     if (storeData) {
-      // سفارشات مربوط به این فروشگاه را می‌خوانیم
+      // ۳. سفارشات مربوط به این فروشگاه را می‌خوانیم
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -66,6 +75,8 @@ export default function SellerOrdersPage() {
 
       if (data) setOrders(data);
       if (error) console.error('Error fetching orders:', error.message, error.code, error.hint);
+    } else {
+      setOrders([]); // اگر فروشگاهی پیدا نشد، لیست سفارشات خالی بماند
     }
     
     setIsLoading(false);
