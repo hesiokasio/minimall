@@ -30,6 +30,14 @@ export default function StoresDirectoryPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🟢 استیت جدید برای شمارش دقیق آمار فروشگاه‌ها (بدون نیاز به لود کل دیتا)
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    pending: 0
+  });
+
   // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -47,11 +55,32 @@ export default function StoresDirectoryPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [storesRes, mallsRes, productsRes] = await Promise.all([
-        supabase.from('stores').select('*').order('created_at', { ascending: false }),
+      // 🟢 دریافت داده‌ها به همراه شمارش وضعیت‌های مختلف فروشگاه‌ها
+      const [
+        storesRes, 
+        mallsRes, 
+        productsRes,
+        activeCountRes,
+        inactiveCountRes,
+        pendingCountRes
+      ] = await Promise.all([
+        supabase.from('stores').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
         supabase.from('malls').select('id, name'),
-        supabase.from('products').select('id, store_id, status')
+        supabase.from('products').select('id, store_id, status'),
+        
+        // شمارش مجزا برای هر وضعیت
+        supabase.from('stores').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('stores').select('id', { count: 'exact', head: true }).in('status', ['inactive', 'suspended']),
+        supabase.from('stores').select('id', { count: 'exact', head: true }).eq('status', 'pending')
       ]);
+
+      // 🟢 بروزرسانی استیت شمارش
+      setStats({
+        total: storesRes.count || 0,
+        active: activeCountRes.count || 0,
+        inactive: inactiveCountRes.count || 0,
+        pending: pendingCountRes.count || 0
+      });
 
       setStores(storesRes.data || []);
       setMalls(mallsRes.data || []);
@@ -77,6 +106,8 @@ export default function StoresDirectoryPage() {
     const { error } = await supabase.from('stores').update({ status: newStatus }).eq('id', storeId);
     if (!error) {
       setStores(stores.map(s => s.id === storeId ? { ...s, status: newStatus } : s));
+      // 🟢 بروزرسانی آمار پس از تغییر وضعیت
+      fetchData(); 
     }
   };
 
@@ -85,6 +116,8 @@ export default function StoresDirectoryPage() {
       const { error } = await supabase.from('stores').delete().eq('id', storeId);
       if (!error) {
         setStores(stores.filter(s => s.id !== storeId));
+        // 🟢 بروزرسانی آمار پس از حذف
+        fetchData();
       } else {
         alert('Error deleting store. Please delete its assigned products first.');
       }
@@ -125,16 +158,6 @@ export default function StoresDirectoryPage() {
     currentPage * itemsPerPage
   );
 
-  // KPIs
-  const stats = useMemo(() => {
-    return {
-      total: stores.length,
-      active: stores.filter(s => s.status === 'active').length,
-      inactive: stores.filter(s => s.status === 'inactive' || s.status === 'suspended').length,
-      pending: stores.filter(s => s.status === 'pending').length,
-    };
-  }, [stores]);
-
   if (isLoading) {
     return (
       <div className="p-8 flex flex-col gap-6 animate-pulse">
@@ -169,27 +192,30 @@ export default function StoresDirectoryPage() {
 
       {/* Summary KPI Cards (Vanguard OS Style) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 sm:p-5 bg-zinc-900 text-white rounded-xl shadow-sm">
+        <div 
+          className="p-4 sm:p-5 bg-zinc-900 text-white rounded-xl shadow-sm cursor-pointer hover:bg-zinc-800 transition-colors"
+          onClick={() => setStatusFilter('all')}
+        >
           <div className="text-[11px] font-medium text-zinc-400 mb-1.5">Total Stores</div>
           <div className="text-2xl font-semibold">{stats.total}</div>
         </div>
         <div 
-          className="p-4 sm:p-5 bg-white border border-zinc-200/80 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all cursor-pointer" 
-          onClick={() => setStatusFilter('active')}
+          className={`p-4 sm:p-5 bg-white border ${statusFilter === 'active' ? 'border-emerald-500 shadow-md ring-1 ring-emerald-500' : 'border-zinc-200/80 hover:border-zinc-300 hover:shadow-sm'} rounded-xl transition-all cursor-pointer`} 
+          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
         >
           <div className="text-[11px] font-medium text-zinc-500 mb-1.5">Active Stores</div>
           <div className="text-2xl font-semibold text-zinc-900">{stats.active}</div>
         </div>
         <div 
-          className="p-4 sm:p-5 bg-white border border-zinc-200/80 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all cursor-pointer" 
-          onClick={() => setStatusFilter('inactive')}
+          className={`p-4 sm:p-5 bg-white border ${statusFilter === 'inactive' ? 'border-rose-500 shadow-md ring-1 ring-rose-500' : 'border-zinc-200/80 hover:border-zinc-300 hover:shadow-sm'} rounded-xl transition-all cursor-pointer`} 
+          onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
         >
           <div className="text-[11px] font-medium text-zinc-500 mb-1.5">Inactive / Suspended</div>
           <div className="text-2xl font-semibold text-zinc-900">{stats.inactive}</div>
         </div>
         <div 
-          className="p-4 sm:p-5 bg-white border border-zinc-200/80 rounded-xl hover:border-zinc-300 hover:shadow-sm transition-all cursor-pointer" 
-          onClick={() => setStatusFilter('pending')}
+          className={`p-4 sm:p-5 bg-white border ${statusFilter === 'pending' ? 'border-amber-500 shadow-md ring-1 ring-amber-500' : 'border-zinc-200/80 hover:border-zinc-300 hover:shadow-sm'} rounded-xl transition-all cursor-pointer`} 
+          onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
         >
           <div className="text-[11px] font-medium text-zinc-500 mb-1.5">Pending Approval</div>
           <div className="text-2xl font-semibold text-amber-600">{stats.pending}</div>
@@ -251,7 +277,7 @@ export default function StoresDirectoryPage() {
         {/* Row 2: Sort and Results Count */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
           <span className="text-[13px] text-zinc-500">
-            Showing <strong className="text-zinc-900 font-semibold">{filteredStores.length}</strong> of <strong className="text-zinc-900 font-semibold">{stores.length}</strong> stores
+            Showing <strong className="text-zinc-900 font-semibold">{filteredStores.length}</strong> of <strong className="text-zinc-900 font-semibold">{stats.total}</strong> stores
           </span>
           
           <div className="relative w-48">

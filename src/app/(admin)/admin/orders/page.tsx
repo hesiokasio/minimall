@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Search, Eye, Package, Truck, CheckCircle, Clock, X, MapPin, Phone, ShoppingBag
+  Search, Eye, Package, Truck, CheckCircle, Clock, X, MapPin, Phone, ShoppingBag, DollarSign, AlertCircle, Trash2
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
 
@@ -18,29 +18,64 @@ export default function OrdersPage() {
   const supabase = createClient();
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    delivered: 0,
+    revenue: 0
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const fetchOrders = async () => {
     setIsLoading(true);
-    const { data } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        items:order_items(*)
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      const [ordersRes, pendingRes, deliveredRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('*, items:order_items(*)', { count: 'exact' })
+          .order('created_at', { ascending: false }),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'delivered')
+      ]);
 
-    if (data) setOrders(data);
-    setIsLoading(false);
+      const fetchedOrders = ordersRes.data || [];
+      
+      const totalRevenue = fetchedOrders
+        .filter(o => o.status !== 'cancelled')
+        .reduce((sum, order) => sum + (Number(order.total_amount) || 0), 0);
+
+      setStats({
+        total: ordersRes.count || 0,
+        pending: pendingRes.count || 0,
+        delivered: deliveredRes.count || 0,
+        revenue: totalRevenue
+      });
+
+      setOrders(fetchedOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   const openOrderDetails = (order: any) => {
     setSelectedOrder(order);
@@ -53,6 +88,7 @@ export default function OrdersPage() {
     if (selectedOrder?.id === orderId) {
       setSelectedOrder({ ...selectedOrder, status: newStatus });
     }
+    fetchOrders();
   };
 
   const updateTrackingCode = async (orderId: string, code: string) => {
@@ -60,32 +96,72 @@ export default function OrdersPage() {
     setOrders(orders.map(o => o.id === orderId ? { ...o, tracking_code: code } : o));
   };
 
-  // Create a mock order to test the UI
-  const createMockOrder = async () => {
+  const deleteOrder = async (orderId: string) => {
+    if (!window.confirm('Are you sure you want to delete this order from database?')) return;
+    await supabase.from('order_items').delete().eq('order_id', orderId);
+    await supabase.from('orders').delete().eq('id', orderId);
+    setIsModalOpen(false);
+    setSelectedOrder(null);
+    fetchOrders();
+  };
+
+  // ساخت سفارش بر اساس محصولات واقعی موجود در دیتابیس
+  const createOrderFromDB = async () => {
+    const { data: dbProducts } = await supabase
+      .from('products')
+      .select('id, name, price')
+      .limit(10);
+
+    const chosenProduct = dbProducts && dbProducts.length > 0
+      ? dbProducts[Math.floor(Math.random() * dbProducts.length)]
+      : { name: 'Catalog Product', price: 1200 };
+
+    const qty = Math.floor(Math.random() * 3) + 1;
+    const unitPrice = Number(chosenProduct.price) || 1200;
+    const totalAmount = qty * unitPrice;
+
     const { data: newOrder } = await supabase.from('orders').insert([{
-      order_number: `ORD-${Math.floor(Math.random() * 10000)}`,
-      customer_name: 'John Doe',
-      customer_phone: '+1 (555) 123-4567',
-      shipping_address: '123 Commerce St, Suite 100, New York, NY 10001',
-      total_amount: 2500,
+      order_number: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      customer_name: `Customer #${Math.floor(100 + Math.random() * 900)}`,
+      customer_phone: `0912${Math.floor(1000000 + Math.random() * 9000000)}`,
+      shipping_address: 'Tehran, Commercial District',
+      total_amount: totalAmount,
       status: 'pending'
     }]).select().single();
 
     if (newOrder) {
       await supabase.from('order_items').insert([
-        { order_id: newOrder.id, product_name: 'Concrete Wall Tile 45x45', quantity: 2, price: 1000 },
-        { order_id: newOrder.id, product_name: 'Tile Adhesive (3kg)', quantity: 1, price: 500 }
+        { order_id: newOrder.id, product_name: chosenProduct.name, quantity: qty, price: unitPrice }
       ]);
       fetchOrders();
     }
   };
 
-  const filteredOrders = orders.filter(o => {
-    const matchesSearch = o.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          o.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || o.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      const matchesSearch = 
+        o.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        o.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || o.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, searchQuery, statusFilter]);
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col gap-6 animate-pulse">
+        <div className="h-10 w-64 bg-zinc-200 rounded-lg" />
+        <div className="grid grid-cols-4 gap-4"><div className="h-24 bg-white border border-zinc-200 rounded-xl col-span-4" /></div>
+        <div className="h-96 w-full bg-white border border-zinc-200 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1440px] mx-auto p-6 space-y-6 text-zinc-900" dir="ltr">
@@ -96,20 +172,62 @@ export default function OrdersPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">Orders Management</h1>
             <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-semibold text-zinc-600">
-              {orders.length} Orders
+              {stats.total} Orders
             </span>
           </div>
           <p className="text-sm text-zinc-500 mt-1">Track, process, and manage customer shipments.</p>
         </div>
         <button 
-          onClick={createMockOrder} 
+          onClick={createOrderFromDB} 
           className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
         >
           <span>+</span> Add Test Order
         </button>
       </div>
 
-      {/* Filter Section (Matches your Product Catalog style) */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div 
+          className="p-4 sm:p-5 bg-zinc-900 text-white rounded-xl shadow-sm cursor-pointer hover:bg-zinc-800 transition-colors"
+          onClick={() => setStatusFilter('All')}
+        >
+          <div className="text-[11px] font-medium text-zinc-400 mb-1.5 flex items-center gap-1">
+            <ShoppingBag className="w-3.5 h-3.5" /> Total Orders
+          </div>
+          <div className="text-2xl font-semibold">{stats.total}</div>
+        </div>
+
+        <div 
+          className={`p-4 sm:p-5 bg-white border ${statusFilter === 'pending' ? 'border-amber-500 shadow-md ring-1 ring-amber-500' : 'border-zinc-200/80 hover:border-zinc-300 hover:shadow-sm'} rounded-xl transition-all cursor-pointer`} 
+          onClick={() => setStatusFilter(statusFilter === 'pending' ? 'All' : 'pending')}
+        >
+          <div className="text-[11px] font-medium text-zinc-500 mb-1.5 flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500" /> Pending Fulfillment
+          </div>
+          <div className="text-2xl font-semibold text-zinc-900">{stats.pending}</div>
+        </div>
+
+        <div 
+          className={`p-4 sm:p-5 bg-white border ${statusFilter === 'delivered' ? 'border-emerald-500 shadow-md ring-1 ring-emerald-500' : 'border-zinc-200/80 hover:border-zinc-300 hover:shadow-sm'} rounded-xl transition-all cursor-pointer`} 
+          onClick={() => setStatusFilter(statusFilter === 'delivered' ? 'All' : 'delivered')}
+        >
+          <div className="text-[11px] font-medium text-zinc-500 mb-1.5 flex items-center gap-1">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Completed (Delivered)
+          </div>
+          <div className="text-2xl font-semibold text-zinc-900">{stats.delivered}</div>
+        </div>
+
+        <div className="p-4 sm:p-5 bg-white border border-zinc-200/80 rounded-xl transition-all">
+          <div className="text-[11px] font-medium text-zinc-500 mb-1.5 flex items-center gap-1">
+            <DollarSign className="w-3.5 h-3.5 text-blue-500" /> Gross Revenue
+          </div>
+          <div className="text-2xl font-semibold text-zinc-900 tracking-tight">
+            ${stats.revenue.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Section */}
       <div className="bg-white border border-zinc-200 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -124,7 +242,7 @@ export default function OrdersPage() {
         <select 
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 bg-zinc-50/50 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900 text-sm text-zinc-700 min-w-[160px]"
+          className="px-3 py-2 bg-zinc-50/50 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900 text-sm text-zinc-700 min-w-[160px] cursor-pointer"
         >
           <option value="All">All Statuses</option>
           {ORDER_STATUSES.map(s => (
@@ -148,12 +266,12 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredOrders.length === 0 ? (
+              {paginatedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">No orders found matching your criteria.</td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => {
+                paginatedOrders.map((order) => {
                   const statusInfo = ORDER_STATUSES.find(s => s.value === order.status) || ORDER_STATUSES[0];
                   const StatusIcon = statusInfo.icon;
 
@@ -192,15 +310,44 @@ export default function OrdersPage() {
           </table>
         </div>
         
-        {/* Pagination Footer */}
-        <div className="bg-white px-6 py-4 border-t border-zinc-200 flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
-            Showing <span className="font-medium text-zinc-900">1</span> to <span className="font-medium text-zinc-900">{filteredOrders.length}</span> of <span className="font-medium text-zinc-900">{filteredOrders.length}</span> orders
-          </p>
+        {/* Table Footer with Real Pagination */}
+        <div className="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
+          <span>
+            Showing <strong className="text-zinc-900">{filteredOrders.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong className="text-zinc-900">{Math.min(currentPage * itemsPerPage, filteredOrders.length)}</strong> of <strong className="text-zinc-900">{filteredOrders.length}</strong> entries
+          </span>
+          
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm text-zinc-400 cursor-not-allowed">Previous</button>
-            <button className="px-3 py-1.5 bg-zinc-900 text-white rounded-md text-sm font-medium">1</button>
-            <button className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm text-zinc-400 cursor-not-allowed">Next</button>
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            
+            <div className="flex items-center gap-1 px-2 font-medium hidden sm:flex">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                    currentPage === page 
+                      ? 'bg-zinc-900 text-white shadow-sm' 
+                      : 'text-zinc-600 hover:bg-zinc-200/50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
@@ -215,9 +362,18 @@ export default function OrdersPage() {
                 <ShoppingBag className="w-5 h-5 text-zinc-400" />
                 Order Details: {selectedOrder.order_number}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 p-1 rounded-md transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => deleteOrder(selectedOrder.id)} 
+                  title="Delete Order"
+                  className="text-zinc-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-md transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setIsModalOpen(false)} className="text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 p-1 rounded-md transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-zinc-50/30">

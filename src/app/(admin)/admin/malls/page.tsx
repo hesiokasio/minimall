@@ -31,6 +31,9 @@ export default function MallsDirectoryPage() {
   const [stores, setStores] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 🟢 استیت جدید برای شمارش دقیق پاساژها
+  const [totalMallsCount, setTotalMallsCount] = useState(0);
 
   // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,11 +51,15 @@ export default function MallsDirectoryPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // 🟢 دریافت داده‌ها به همراه شمارش دقیق پاساژها
       const [mallsRes, storesRes, productsRes] = await Promise.all([
-        supabase.from('malls').select('*').order('created_at', { ascending: false }),
+        supabase.from('malls').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
         supabase.from('stores').select('id, mall_id, status'),
         supabase.from('products').select('id, store_id')
       ]);
+
+      // 🟢 بروزرسانی استیت شمارش
+      setTotalMallsCount(mallsRes.count || 0);
 
       setMalls(mallsRes.data || []);
       setStores(storesRes.data || []);
@@ -87,6 +94,7 @@ export default function MallsDirectoryPage() {
       const { error } = await supabase.from('malls').delete().eq('id', mallId);
       if (!error) {
         setMalls(malls.filter(m => m.id !== mallId));
+        setTotalMallsCount(prev => prev - 1); // 🟢 بروزرسانی تعداد کل در صورت حذف
       } else {
         alert('Error deleting mall. Ensure no stores are attached to it first.');
       }
@@ -146,7 +154,7 @@ export default function MallsDirectoryPage() {
               Malls Directory
             </h1>
             <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-[11px] font-medium text-zinc-600">
-              {malls.length} Total
+              {totalMallsCount} Total {/* 🟢 استفاده از شمارش دقیق */}
             </span>
           </div>
           <p className="text-sm text-zinc-500 mt-1">
@@ -208,7 +216,7 @@ export default function MallsDirectoryPage() {
         {/* Row 2: Sort and Results Count */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
           <span className="text-[13px] text-zinc-500">
-            Showing <strong className="text-zinc-900 font-semibold">{filteredMalls.length}</strong> of <strong className="text-zinc-900 font-semibold">{malls.length}</strong> malls
+            Showing <strong className="text-zinc-900 font-semibold">{filteredMalls.length}</strong> of <strong className="text-zinc-900 font-semibold">{totalMallsCount}</strong> malls
           </span>
           
           <div className="relative w-48">

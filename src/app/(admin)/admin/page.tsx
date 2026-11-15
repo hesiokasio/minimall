@@ -107,6 +107,10 @@ export default function SuperAdminDashboard() {
   const supabase = createClient();
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 🟢 استیت جدید برای ذخیره آمار دقیق کل رکوردها
+  const [counts, setCounts] = useState({ malls: 0, stores: 0, products: 0, sections: 0 });
+  
   const [malls, setMalls] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -116,7 +120,6 @@ export default function SuperAdminDashboard() {
   const [dateRange, setDateRange] = useState<'7d' | '30d'>('30d');
   const [chartMetric, setChartMetric] = useState<'revenue' | 'orders'>('revenue');
 
-  // استیت‌های مدال‌ها و پیام‌های Toast
   const [mallModalOpen, setMallModalOpen] = useState(false);
   const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -130,13 +133,23 @@ export default function SuperAdminDashboard() {
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
+      // 🟢 دریافت داینامیک اطلاعات با بهینه‌سازی دقیق
+      // ما فقط 100 آیتم آخر را برای لیست‌ها لود می‌کنیم اما تعداد کل (count) را محاسبه می‌کنیم
       const [mallsRes, storesRes, productsRes, sectionsRes, itemsRes] = await Promise.all([
-        supabase.from('malls').select('*').order('created_at', { ascending: false }),
-        supabase.from('stores').select('*').order('created_at', { ascending: false }),
-        supabase.from('products').select('*').order('created_at', { ascending: false }),
-        supabase.from('home_sections').select('*').order('sort_order', { ascending: true }),
+        supabase.from('malls').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(100),
+        supabase.from('stores').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(100),
+        supabase.from('products').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(100),
+        supabase.from('home_sections').select('*', { count: 'exact' }).order('sort_order', { ascending: true }),
         supabase.from('home_section_items').select('*'),
       ]);
+
+      // 🟢 ذخیره آمار واقعی دیتابیس
+      setCounts({
+        malls: mallsRes.count || 0,
+        stores: storesRes.count || 0,
+        products: productsRes.count || 0,
+        sections: sectionsRes.count || 0,
+      });
 
       setMalls(mallsRes.data || []);
       setStores(storesRes.data || []);
@@ -184,7 +197,8 @@ export default function SuperAdminDashboard() {
       });
     });
 
-    if (malls.length === 0) {
+    // 🟢 آپدیت شده برای استفاده از counts
+    if (counts.malls === 0) {
       alerts.push({
         id: 'no-malls',
         severity: 'critical',
@@ -197,7 +211,7 @@ export default function SuperAdminDashboard() {
     }
 
     return alerts;
-  }, [sections, sectionItems, products, malls]);
+  }, [sections, sectionItems, products, counts.malls]);
 
   const currentChartData = DEMO_SALES_SERIES[dateRange];
   const totalDemoRevenue = currentChartData.reduce((acc, item) => acc + item.revenue, 0);
@@ -220,7 +234,6 @@ export default function SuperAdminDashboard() {
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
       
-      {/* Page Header & Period Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -265,7 +278,6 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* Quick Actions Bar (با قابلیت باز کردن مستقیم مدال‌ها) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         <button
           onClick={() => setMallModalOpen(true)}
@@ -312,11 +324,11 @@ export default function SuperAdminDashboard() {
         </Link>
       </div>
 
-      {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* 🟢 نمایش داینامیک آمار از state جدید counts */}
         <KpiCard
           label="Total Malls"
-          value={malls.length}
+          value={counts.malls}
           subtext="Commercial complexes onboarded"
           trend="Active"
           trendUp={true}
@@ -326,8 +338,8 @@ export default function SuperAdminDashboard() {
         />
         <KpiCard
           label="Registered Stores"
-          value={stores.length}
-          subtext={`Across ${malls.length} shopping centers`}
+          value={counts.stores}
+          subtext={`Across ${counts.malls} shopping centers`}
           trend="+11.1%"
           trendUp={true}
           sparkline={[40, 50, 62, 70, 85, 95]}
@@ -336,7 +348,7 @@ export default function SuperAdminDashboard() {
         />
         <KpiCard
           label="Catalog Products"
-          value={products.length}
+          value={counts.products}
           subtext="Unique catalog SKUs"
           trend="+19.3%"
           trendUp={true}
@@ -346,7 +358,7 @@ export default function SuperAdminDashboard() {
         />
         <KpiCard
           label="Storefront Sections"
-          value={sections.length}
+          value={counts.sections}
           subtext={`${sectionItems.length} total items assigned`}
           trend="Live CMS"
           trendUp={true}
@@ -356,7 +368,6 @@ export default function SuperAdminDashboard() {
         />
       </div>
 
-      {/* Interactive Sales Chart + Storefront Posture */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white border border-zinc-200/80 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
           <div>
@@ -449,14 +460,13 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        {/* Homepage Layout Posture */}
         <div className="bg-white border border-zinc-200/80 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
               <div>
                 <h2 className="text-sm font-semibold text-zinc-900">Homepage Layout Posture</h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  Active sequence of {sections.length} storefront rows
+                  Active sequence of {counts.sections} storefront rows {/* 🟢 آپدیت شد */}
                 </p>
               </div>
               <LayoutTemplate className="w-4 h-4 text-zinc-400" />
@@ -511,7 +521,6 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* Operational Alerts, Recent Products, and Active Stores */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white border border-zinc-200/80 rounded-xl p-5 sm:p-6 flex flex-col">
           <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
@@ -566,7 +575,6 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Catalog Products */}
         <div className="bg-white border border-zinc-200/80 rounded-xl p-5 sm:p-6 flex flex-col">
           <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
             <div>
@@ -606,7 +614,6 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        {/* Registered Stores */}
         <div className="bg-white border border-zinc-200/80 rounded-xl p-5 sm:p-6 flex flex-col">
           <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
             <div>
@@ -642,9 +649,6 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* =========================================================
-          MODALS (Add Mall, Register Store, Add Product)
-      ========================================================= */}
       {mallModalOpen && (
         <AddMallModal
           supabase={supabase}
@@ -683,7 +687,6 @@ export default function SuperAdminDashboard() {
         />
       )}
 
-      {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 text-white rounded-xl p-4 shadow-xl border border-zinc-800 flex items-center gap-3 text-xs animate-in fade-in slide-in-from-bottom-4">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -701,9 +704,6 @@ export default function SuperAdminDashboard() {
   );
 }
 
-/* ---------------------------------------------------------
-   1. ADD MALL MODAL (Optimized: Name, City, Zone, Category, Address, Image)
---------------------------------------------------------- */
 const MALL_ZONES = [
   'North (شمال شهر)',
   'Center / Bazaar (مرکز و بازار)',
@@ -778,7 +778,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
 
       let { error } = await supabase.from('malls').insert([payload]);
 
-      // Fallback در صورتی که دستور SQL بالا هنوز اجرا نشده باشد
       if (error) {
         const retry = await supabase.from('malls').insert([{ name: form.name, image_url: finalImageUrl }]);
         if (retry.error) throw retry.error;
@@ -808,7 +807,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
-            {/* 1. Mall Name */}
             <div className="sm:col-span-2">
               <label className="block font-medium text-zinc-700 mb-1">
                 Mall Name <span className="text-rose-500">*</span>
@@ -823,7 +821,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
               {errors.name && <p className="text-rose-600 text-[11px] mt-1">{errors.name}</p>}
             </div>
 
-            {/* 2. City & 3. Zone */}
             <div>
               <label className="block font-medium text-zinc-700 mb-1">
                 City <span className="text-rose-500">*</span>
@@ -853,7 +850,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
               </select>
             </div>
 
-            {/* 4. Mall Specialty Category */}
             <div className="sm:col-span-2">
               <label className="block font-medium text-zinc-700 mb-1">
                 Primary Category (بورس / کاربری پاساژ) <span className="text-rose-500">*</span>
@@ -869,7 +865,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
               </select>
             </div>
 
-            {/* 5. Address */}
             <div className="sm:col-span-2">
               <label className="block font-medium text-zinc-700 mb-1">
                 Street Address (آدرس دقیق) <span className="text-rose-500">*</span>
@@ -884,7 +879,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
               {errors.address && <p className="text-rose-600 text-[11px] mt-1">{errors.address}</p>}
             </div>
 
-            {/* 6. Floors & Status */}
             <div>
               <label className="block font-medium text-zinc-700 mb-1">Number of Floors</label>
               <input
@@ -909,7 +903,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
               </select>
             </div>
 
-            {/* 7. Cover Image */}
             <div className="sm:col-span-2 space-y-2">
               <label className="block font-medium text-zinc-700">Cover Image (Upload or URL)</label>
               <div className="flex items-center gap-3">
@@ -934,7 +927,6 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
               />
             </div>
 
-            {/* 8. Short Description */}
             <div className="sm:col-span-2">
               <label className="block font-medium text-zinc-700 mb-1">Short Description (Optional)</label>
               <textarea
@@ -969,9 +961,7 @@ function AddMallModal({ supabase, onClose, onSuccess }: any) {
     </div>
   );
 }
-/* ---------------------------------------------------------
-   2. REGISTER STORE MODAL
---------------------------------------------------------- */
+
 function AddStoreModal({ supabase, malls, onClose, onSuccess }: any) {
   const [form, setForm] = useState({
     name: '',
@@ -1146,9 +1136,6 @@ function AddStoreModal({ supabase, malls, onClose, onSuccess }: any) {
   );
 }
 
-/* ---------------------------------------------------------
-   3. ADD PRODUCT MODAL
---------------------------------------------------------- */
 function AddProductModal({ supabase, stores, onClose, onSuccess }: any) {
   const [form, setForm] = useState({
     name: '',
