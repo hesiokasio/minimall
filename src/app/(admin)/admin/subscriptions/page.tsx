@@ -1,8 +1,13 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 // در صورت نیاز آیکون‌ها را از کتابخانه خودتان ایمپورت کنید، مثلا:
 // import { Search, Plus, Eye } from 'lucide-react';
+import TablePagination from '../../../../components/layout/TablePagination';
 
 export default function SubscriptionsPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const mockSubscriptions = [
     {
       id: 1,
@@ -32,6 +37,12 @@ export default function SubscriptionsPage() {
       status: 'Expired',
     },
   ];
+
+  // 🟢 داده‌های برش‌خورده بر اساس صفحه فعلی
+  const paginatedSubscriptions = mockSubscriptions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto text-gray-900 font-sans">
@@ -108,7 +119,7 @@ export default function SubscriptionsPage() {
         {/* Bottom Row: Results Count & Sort */}
         <div className="px-4 py-3 flex justify-between items-center bg-gray-50/30 rounded-b-xl">
           <div className="text-sm text-gray-500">
-            Showing <span className="font-semibold text-gray-700">3</span> of <span className="font-semibold text-gray-700">3</span> subscriptions
+            Showing <span className="font-semibold text-gray-700">{paginatedSubscriptions.length}</span> of <span className="font-semibold text-gray-700">{mockSubscriptions.length}</span> subscriptions
           </div>
           
           {/* Sort Dropdown */}
@@ -127,7 +138,7 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-gray-50/50 border-b border-gray-200">
@@ -141,7 +152,8 @@ export default function SubscriptionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {mockSubscriptions.map((sub) => (
+              {/* 🟢 به جای کل دیتا، دیتای صفحه‌بندی شده را مپ می‌زنیم */}
+              {paginatedSubscriptions.map((sub) => (
                 <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{sub.storeName}</div>
@@ -172,23 +184,14 @@ export default function SubscriptionsPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
-        <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            Showing <span className="font-medium text-gray-900">1</span> to <span className="font-medium text-gray-900">3</span> of <span className="font-medium text-gray-900">3</span> subscriptions
-          </div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-md cursor-not-allowed">
-              Previous
-            </button>
-            <button className="px-3 py-1 text-sm text-white bg-black rounded-md font-medium">
-              1
-            </button>
-            <button className="px-3 py-1 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-md cursor-not-allowed">
-              Next
-            </button>
-          </div>
-        </div>
+        {/* 🟢 کامپوننت مشترک صفحه‌بندی */}
+        <TablePagination
+          totalItems={mockSubscriptions.length}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
     </div>
   );

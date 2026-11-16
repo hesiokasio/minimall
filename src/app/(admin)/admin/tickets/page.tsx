@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, User, CornerDownRight
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
+import TablePagination from '../../../../components/layout/TablePagination';
 
 const StatusBadge = ({ status }: { status: string }) => {
   if (status === 'in_progress') {
@@ -46,7 +47,7 @@ export default function AdminTicketsPage() {
   const [isSavingReply, setIsSavingReply] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchTickets();
@@ -167,10 +168,10 @@ export default function AdminTicketsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalItems = filteredTickets.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentTickets = filteredTickets.slice(startIndex, startIndex + itemsPerPage);
+  const currentTickets = filteredTickets.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
@@ -359,22 +360,13 @@ export default function AdminTicketsPage() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="px-5 py-3 border-t border-zinc-200/80 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-auto">
-                <div className="text-xs text-zinc-500">
-                  Showing <span className="font-medium text-zinc-900">{startIndex + 1}</span> to <span className="font-medium text-zinc-900">{Math.min(startIndex + itemsPerPage, totalItems)}</span> of <span className="font-medium text-zinc-900">{totalItems}</span> tickets
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 transition-colors bg-white shadow-2xs">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-xs font-medium text-zinc-700 px-2">Page {currentPage} of {totalPages}</span>
-                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 transition-colors bg-white shadow-2xs">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <TablePagination
+              totalItems={filteredTickets.length}
+              currentPage={currentPage}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+            />
           </>
         )}
       </div>

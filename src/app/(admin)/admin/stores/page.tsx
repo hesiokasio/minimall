@@ -5,20 +5,11 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Plus, Search, Store, Trash2, CheckCircle2, 
-  XCircle, Eye, Package, ChevronDown, Clock, Loader2, X
+  XCircle, Eye, Package, ChevronDown, Clock, Loader2, X,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
-
-const CATEGORIES = [
-  'Apparel & Fashion',
-  'Beauty & Personal Care',
-  'Electronics',
-  'Food & Beverage',
-  'Home & Living',
-  'Jewelry & Watches',
-  'Construction & Materials',
-  'Sports & Outdoors'
-];
+import AddStoreModal from '../../../../components/modals/AddStoreModal';
 
 export default function StoresDirectoryPage() {
   const supabase = createClient();
@@ -30,7 +21,6 @@ export default function StoresDirectoryPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🟢 استیت جدید برای شمارش دقیق آمار فروشگاه‌ها (بدون نیاز به لود کل دیتا)
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -38,24 +28,19 @@ export default function StoresDirectoryPage() {
     pending: 0
   });
 
-  // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [mallFilter, setMallFilter] = useState(preselectedMallId || 'all');
   const [sortOption, setSortOption] = useState('name-asc');
 
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Fetch Data
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // 🟢 دریافت داده‌ها به همراه شمارش وضعیت‌های مختلف فروشگاه‌ها
       const [
         storesRes, 
         mallsRes, 
@@ -67,14 +52,11 @@ export default function StoresDirectoryPage() {
         supabase.from('stores').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
         supabase.from('malls').select('id, name'),
         supabase.from('products').select('id, store_id, status'),
-        
-        // شمارش مجزا برای هر وضعیت
         supabase.from('stores').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('stores').select('id', { count: 'exact', head: true }).in('status', ['inactive', 'suspended']),
         supabase.from('stores').select('id', { count: 'exact', head: true }).eq('status', 'pending')
       ]);
 
-      // 🟢 بروزرسانی استیت شمارش
       setStats({
         total: storesRes.count || 0,
         active: activeCountRes.count || 0,
@@ -96,17 +78,14 @@ export default function StoresDirectoryPage() {
     fetchData();
   }, []);
 
-  // Reset pagination to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, mallFilter, sortOption]);
+  }, [searchQuery, statusFilter, mallFilter, sortOption, itemsPerPage]);
 
-  // Actions
   const updateStoreStatus = async (storeId: string, newStatus: string) => {
     const { error } = await supabase.from('stores').update({ status: newStatus }).eq('id', storeId);
     if (!error) {
       setStores(stores.map(s => s.id === storeId ? { ...s, status: newStatus } : s));
-      // 🟢 بروزرسانی آمار پس از تغییر وضعیت
       fetchData(); 
     }
   };
@@ -116,7 +95,6 @@ export default function StoresDirectoryPage() {
       const { error } = await supabase.from('stores').delete().eq('id', storeId);
       if (!error) {
         setStores(stores.filter(s => s.id !== storeId));
-        // 🟢 بروزرسانی آمار پس از حذف
         fetchData();
       } else {
         alert('Error deleting store. Please delete its assigned products first.');
@@ -124,7 +102,6 @@ export default function StoresDirectoryPage() {
     }
   };
 
-  // Filter and Sort Logic
   const filteredStores = useMemo(() => {
     let result = stores.filter((store) => {
       const matchesSearch = 
@@ -151,12 +128,24 @@ export default function StoresDirectoryPage() {
     }
   }, [stores, searchQuery, statusFilter, mallFilter, sortOption]);
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredStores.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredStores.length / itemsPerPage));
   const paginatedStores = filteredStores.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const getPaginationGroup = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 2) {
+      return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
 
   if (isLoading) {
     return (
@@ -168,10 +157,12 @@ export default function StoresDirectoryPage() {
     );
   }
 
+  const startEntry = filteredStores.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endEntry = Math.min(currentPage * itemsPerPage, filteredStores.length);
+
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-zinc-900 tracking-tight">
@@ -190,7 +181,6 @@ export default function StoresDirectoryPage() {
         </button>
       </div>
 
-      {/* Summary KPI Cards (Vanguard OS Style) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div 
           className="p-4 sm:p-5 bg-zinc-900 text-white rounded-xl shadow-sm cursor-pointer hover:bg-zinc-800 transition-colors"
@@ -222,10 +212,7 @@ export default function StoresDirectoryPage() {
         </div>
       </div>
 
-      {/* Filters Toolbar */}
       <div className="bg-white border border-zinc-200/80 rounded-xl p-4 shadow-sm flex flex-col gap-4">
-        
-        {/* Row 1: Filters */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
           <div className="relative lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -274,7 +261,6 @@ export default function StoresDirectoryPage() {
           </div>
         </div>
 
-        {/* Row 2: Sort and Results Count */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
           <span className="text-[13px] text-zinc-500">
             Showing <strong className="text-zinc-900 font-semibold">{filteredStores.length}</strong> of <strong className="text-zinc-900 font-semibold">{stats.total}</strong> stores
@@ -296,7 +282,6 @@ export default function StoresDirectoryPage() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div className="bg-white border border-zinc-200/80 rounded-xl shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1100px]">
@@ -332,7 +317,6 @@ export default function StoresDirectoryPage() {
 
                   return (
                     <tr key={store.id} className="hover:bg-zinc-50/50 transition-colors group">
-                      
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 overflow-hidden shrink-0 flex items-center justify-center">
@@ -401,7 +385,6 @@ export default function StoresDirectoryPage() {
 
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          
                           {store.status === 'pending' && (
                             <button
                               onClick={() => updateStoreStatus(store.id, 'active')}
@@ -453,49 +436,109 @@ export default function StoresDirectoryPage() {
           </table>
         </div>
 
-        {/* Table Footer with Pagination */}
-        <div className="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
-          <span>
-            Showing <strong className="text-zinc-900">{filteredStores.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong className="text-zinc-900">{Math.min(currentPage * itemsPerPage, filteredStores.length)}</strong> of <strong className="text-zinc-900">{filteredStores.length}</strong> entries
-          </span>
-          
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            
-            <div className="flex items-center gap-1 px-2 font-medium hidden sm:flex">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                    currentPage === page 
-                      ? 'bg-zinc-900 text-white shadow-sm' 
-                      : 'text-zinc-600 hover:bg-zinc-200/50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+        {/* Enterprise Data Table Footer */}
+        <div className="px-5 py-3.5 border-t border-zinc-200/80 bg-zinc-50/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-zinc-200/80 shadow-2xs text-zinc-600">
+              <span>Showing</span>
+              <span className="font-semibold text-zinc-900 tabular-nums">{startEntry}–{endEntry}</span>
+              <span>of</span>
+              <span className="font-semibold text-zinc-900 tabular-nums">{filteredStores.length}</span>
             </div>
 
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
+            <div className="hidden sm:block h-4 w-[1px] bg-zinc-200" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-500 font-medium">Rows per page</span>
+              <div className="relative">
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="appearance-none h-7 pl-2.5 pr-7 text-xs font-semibold text-zinc-800 bg-white border border-zinc-200/90 rounded-md shadow-2xs hover:border-zinc-300 focus:outline-none focus:border-zinc-900 transition-colors cursor-pointer tabular-nums"
+                >
+                  {[5, 10, 20, 50].map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-medium text-zinc-500 tabular-nums hidden md:inline-block">
+              Page <strong className="text-zinc-900 font-semibold">{currentPage}</strong> of <strong className="text-zinc-900 font-semibold">{totalPages}</strong>
+            </span>
+
+            <div className="inline-flex items-center bg-white border border-zinc-200/90 rounded-lg p-0.5 shadow-2xs">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                title="First Page"
+                className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-35 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                title="Previous Page"
+                className="px-2 h-7 rounded-md flex items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-35 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+
+              <div className="h-4 w-[1px] bg-zinc-200 mx-0.5" />
+
+              <div className="flex items-center gap-0.5 px-0.5">
+                {getPaginationGroup().map((item, index) => (
+                  item === '...' ? (
+                    <span key={`dots-${index}`} className="w-7 h-7 flex items-center justify-center text-zinc-400 text-xs select-none">
+                      &hellip;
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => setCurrentPage(item as number)}
+                      className={`min-w-[28px] h-7 px-1.5 rounded-md text-xs font-semibold flex items-center justify-center transition-all tabular-nums ${
+                        currentPage === item 
+                          ? 'bg-zinc-900 text-white shadow-2xs' 
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                ))}
+              </div>
+
+              <div className="h-4 w-[1px] bg-zinc-200 mx-0.5" />
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                title="Next Page"
+                className="px-2 h-7 rounded-md flex items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-35 disabled:pointer-events-none transition-colors"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+                title="Last Page"
+                className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-35 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Add Store Modal */}
       {isAddModalOpen && (
         <AddStoreModal 
           supabase={supabase} 
@@ -508,173 +551,6 @@ export default function StoresDirectoryPage() {
         />
       )}
 
-    </div>
-  );
-}
-
-
-/* ---------------------------------------------------------
-   ADD STORE MODAL COMPONENT
---------------------------------------------------------- */
-function AddStoreModal({ supabase, malls, onClose, onSuccess }: any) {
-  const [form, setForm] = useState({
-    name: '',
-    mallId: malls[0]?.id || '',
-    floor: 1,
-    unit: '101',
-    category: CATEGORIES[0],
-    status: 'active',
-    owner: '',
-    phone: '',
-    email: '',
-    description: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim()) return;
-    setSubmitting(true);
-
-    try {
-      const fullPayload: any = {
-        name: form.name,
-        brand_name: form.name,
-        mall_id: form.mallId || null,
-        floor: Number(form.floor),
-        unit: form.unit,
-        category: form.category,
-        status: form.status,
-        owner: form.owner,
-        phone: form.phone,
-        email: form.email,
-        description: form.description,
-      };
-
-      const { error } = await supabase.from('stores').insert([fullPayload]);
-      if (error) throw error;
-      onSuccess();
-    } catch (err: any) {
-      alert('Error registering store: ' + (err?.message || 'Database error'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-2xl border border-zinc-200 shadow-2xl overflow-hidden my-8">
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-zinc-900">Register Store</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Store Name <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Assigned Mall</label>
-              <select
-                value={form.mallId}
-                onChange={(e) => setForm({ ...form, mallId: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                <option value="">Select Mall...</option>
-                {malls.map((m: any) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block font-medium text-zinc-700 mb-1">Floor</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.floor}
-                  onChange={(e) => setForm({ ...form, floor: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-zinc-700 mb-1">Unit #</label>
-                <input
-                  type="text"
-                  value={form.unit}
-                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Category</label>
-              <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Status</label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                <option value="active">Active</option>
-                <option value="pending">Pending Approval</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Owner / Manager</label>
-              <input
-                type="text"
-                value={form.owner}
-                onChange={(e) => setForm({ ...form, owner: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Contact Phone</label>
-              <input
-                type="text"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-zinc-100 flex items-center justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-zinc-200 font-medium text-zinc-700">Cancel</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-zinc-900 text-white font-medium hover:bg-zinc-800">
-              {submitting ? 'Saving...' : 'Register Store'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
 
+// 🟢 ۱. وارد کردن کامپوننت‌های مشترک
+import AddMallModal from '../../../../components/modals/AddMallModal';
+import TablePagination from '../../../../components/layout/TablePagination'; 
+
 const MALL_ZONES = [
   'North (شمال شهر)',
   'Center / Bazaar (مرکز و بازار)',
@@ -32,35 +36,28 @@ export default function MallsDirectoryPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // 🟢 استیت جدید برای شمارش دقیق پاساژها
   const [totalMallsCount, setTotalMallsCount] = useState(0);
 
-  // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
   const [sortOption, setSortOption] = useState('newest');
 
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // 🟢 دریافت داده‌ها به همراه شمارش دقیق پاساژها
       const [mallsRes, storesRes, productsRes] = await Promise.all([
         supabase.from('malls').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
         supabase.from('stores').select('id, mall_id, status'),
         supabase.from('products').select('id, store_id')
       ]);
 
-      // 🟢 بروزرسانی استیت شمارش
       setTotalMallsCount(mallsRes.count || 0);
-
       setMalls(mallsRes.data || []);
       setStores(storesRes.data || []);
       setProducts(productsRes.data || []);
@@ -75,12 +72,10 @@ export default function MallsDirectoryPage() {
     fetchData();
   }, []);
 
-  // Reset pagination to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, zoneFilter, sortOption]);
+  }, [searchQuery, statusFilter, zoneFilter, sortOption, itemsPerPage]);
 
-  // Actions
   const toggleMallStatus = async (mallId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     const { error } = await supabase.from('malls').update({ status: newStatus }).eq('id', mallId);
@@ -94,14 +89,13 @@ export default function MallsDirectoryPage() {
       const { error } = await supabase.from('malls').delete().eq('id', mallId);
       if (!error) {
         setMalls(malls.filter(m => m.id !== mallId));
-        setTotalMallsCount(prev => prev - 1); // 🟢 بروزرسانی تعداد کل در صورت حذف
+        setTotalMallsCount(prev => prev - 1); 
       } else {
         alert('Error deleting mall. Ensure no stores are attached to it first.');
       }
     }
   };
 
-  // Filter and Sort Logic
   const filteredMalls = useMemo(() => {
     let result = malls.filter((mall) => {
       const matchesSearch = 
@@ -126,8 +120,6 @@ export default function MallsDirectoryPage() {
     }
   }, [malls, searchQuery, statusFilter, zoneFilter, sortOption]);
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredMalls.length / itemsPerPage);
   const paginatedMalls = filteredMalls.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -146,7 +138,6 @@ export default function MallsDirectoryPage() {
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -154,7 +145,7 @@ export default function MallsDirectoryPage() {
               Malls Directory
             </h1>
             <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-[11px] font-medium text-zinc-600">
-              {totalMallsCount} Total {/* 🟢 استفاده از شمارش دقیق */}
+              {totalMallsCount} Total 
             </span>
           </div>
           <p className="text-sm text-zinc-500 mt-1">
@@ -170,9 +161,7 @@ export default function MallsDirectoryPage() {
         </button>
       </div>
 
-      {/* Filters Toolbar (Vanguard OS Style - Clean Grid Layout) */}
       <div className="bg-white border border-zinc-200/80 rounded-xl p-4 shadow-sm flex flex-col gap-4">
-        
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
           <div className="relative lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -213,7 +202,6 @@ export default function MallsDirectoryPage() {
           </div>
         </div>
 
-        {/* Row 2: Sort and Results Count */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
           <span className="text-[13px] text-zinc-500">
             Showing <strong className="text-zinc-900 font-semibold">{filteredMalls.length}</strong> of <strong className="text-zinc-900 font-semibold">{totalMallsCount}</strong> malls
@@ -235,7 +223,6 @@ export default function MallsDirectoryPage() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div className="bg-white border border-zinc-200/80 rounded-xl shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
@@ -268,7 +255,6 @@ export default function MallsDirectoryPage() {
 
                   return (
                     <tr key={mall.id} className="hover:bg-zinc-50/50 transition-colors group">
-                      
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 overflow-hidden shrink-0">
@@ -367,49 +353,17 @@ export default function MallsDirectoryPage() {
           </table>
         </div>
         
-        {/* Table Footer with Pagination */}
-        <div className="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
-          <span>
-            Showing <strong className="text-zinc-900">{filteredMalls.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong className="text-zinc-900">{Math.min(currentPage * itemsPerPage, filteredMalls.length)}</strong> of <strong className="text-zinc-900">{filteredMalls.length}</strong> entries
-          </span>
-          
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            
-            <div className="flex items-center gap-1 px-2 font-medium hidden sm:flex">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                    currentPage === page 
-                      ? 'bg-zinc-900 text-white shadow-sm' 
-                      : 'text-zinc-600 hover:bg-zinc-200/50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        {/* 🟢 ۲. استفاده از کامپوننت مشترک صفحه‌بندی */}
+        <TablePagination
+          totalItems={filteredMalls.length}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+        
       </div>
 
-      {/* Add Mall Modal */}
       {isAddModalOpen && (
         <AddMallModal 
           supabase={supabase} 
@@ -421,220 +375,6 @@ export default function MallsDirectoryPage() {
         />
       )}
 
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------
-   ADD MALL MODAL COMPONENT
---------------------------------------------------------- */
-function AddMallModal({ supabase, onClose, onSuccess }: any) {
-  const [form, setForm] = useState({
-    name: '',
-    city: 'Tehran',
-    zone: MALL_ZONES[0],
-    category: MALL_CATEGORIES[0],
-    address: '',
-    floors: 3,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=600&q=80',
-    description: '',
-  });
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [errors, setErrors] = useState<any>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  const validate = () => {
-    const errs: any = {};
-    if (!form.name.trim()) errs.name = 'Mall name is required.';
-    if (!form.city.trim()) errs.city = 'City is required.';
-    if (!form.address.trim()) errs.address = 'Address is required.';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting || !validate()) return;
-    setSubmitting(true);
-
-    try {
-      let finalImageUrl = form.image;
-      if (uploadFile) {
-        const ext = uploadFile.name.split('.').pop();
-        const fileName = `mall-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('banners').upload(fileName, uploadFile);
-        if (!upErr) {
-          const { data } = supabase.storage.from('banners').getPublicUrl(fileName);
-          finalImageUrl = data.publicUrl;
-        }
-      }
-
-      const payload = {
-        name: form.name,
-        city: form.city,
-        zone: form.zone,
-        category: form.category,
-        address: form.address,
-        floors: Number(form.floors),
-        status: form.status,
-        image_url: finalImageUrl,
-        description: form.description,
-      };
-
-      const { error } = await supabase.from('malls').insert([payload]);
-      if (error) throw error;
-      onSuccess();
-    } catch (err: any) {
-      alert('Error saving mall: ' + (err?.message || 'Database error'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-2xl border border-zinc-200 shadow-2xl overflow-hidden my-8">
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900">Add New Shopping Mall</h2>
-            <p className="text-[11px] text-zinc-500 mt-0.5">Define location, zone, and specialty category</p>
-          </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Mall Name <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Palladium Mall"
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900"
-              />
-              {errors.name && <p className="text-rose-600 text-[11px] mt-1">{errors.name}</p>}
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">City <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Zone / District <span className="text-rose-500">*</span></label>
-              <select
-                value={form.zone}
-                onChange={(e) => setForm({ ...form, zone: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white focus:outline-none focus:border-zinc-900"
-              >
-                {MALL_ZONES.map((z) => (
-                  <option key={z} value={z}>{z}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Primary Category <span className="text-rose-500">*</span></label>
-              <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white focus:outline-none focus:border-zinc-900"
-              >
-                {MALL_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Street Address <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Number of Floors</label>
-              <input
-                type="number"
-                min="1"
-                max="30"
-                value={form.floors}
-                onChange={(e) => setForm({ ...form, floors: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Status</label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2 space-y-2">
-              <label className="block font-medium text-zinc-700">Cover Image (Upload or URL)</label>
-              <div className="flex items-center gap-3">
-                <img
-                  src={uploadFile ? URL.createObjectURL(uploadFile) : form.image}
-                  alt="Preview"
-                  className="w-12 h-12 rounded-lg object-cover border border-zinc-200 shrink-0"
-                />
-                <input
-                  type="text"
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-                />
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                className="w-full text-[11px] text-zinc-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-semibold file:bg-zinc-100 file:text-zinc-700 hover:file:bg-zinc-200 cursor-pointer"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Short Description (Optional)</label>
-              <textarea
-                rows={2}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-zinc-100 flex items-center justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-zinc-200 font-medium text-zinc-700 hover:bg-zinc-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-zinc-900 text-white font-medium hover:bg-zinc-800 disabled:opacity-50 inline-flex items-center gap-1.5">
-              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {submitting ? 'Saving...' : 'Create Mall'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

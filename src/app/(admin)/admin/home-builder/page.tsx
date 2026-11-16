@@ -26,13 +26,11 @@ export default function HomePageBuilder() {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('home_sections')
-      // 🔴 اینجا دیتابیس از is_active شما می‌خواند
       .select(`
         id, title, type, sort_order, is_active, is_published,
         items:home_section_items(id, image_url, title, target_link)
       `)
-      .eq('is_published', true) // 🔴 فقط آنهایی که پابلیش شده‌اند
-      .eq('is_active', true)
+      // 🔴 دو خط eq را از اینجا حذف کردیم تا همه سکشن‌ها (منتشر شده و درفت) نمایش داده شوند
       .order('sort_order', { ascending: true });
 
     if (data) {
@@ -41,7 +39,6 @@ export default function HomePageBuilder() {
         name: sec.title || '', 
         type: sec.type || 'full_banner',
         order: sec.sort_order || 1,
-        // 🔴 مپ کردن is_active دیتابیس شما به دکمه چشم (isVisible)
         isVisible: sec.is_active !== false, 
         isPublished: sec.is_published === true, 
         updatedAt: new Date().toISOString().split('T')[0],
@@ -238,29 +235,36 @@ export default function HomePageBuilder() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
-                      
-                      <button 
-                        onClick={() => togglePublish(section.id, section.isPublished)} 
-                        title={section.isPublished ? 'Unpublish' : 'Publish to Live'} 
-                        className={`p-2 rounded-md transition-colors mr-2 ${section.isPublished ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
-                      >
-                        <Globe className="w-4 h-4" />
-                      </button>
-                      
-                      <div className="w-px h-5 bg-zinc-200 mx-1"></div>
-                      
-                      <button 
-                        onClick={() => toggleVisibility(section.id, section.isVisible)} 
-                        title={section.isVisible ? 'Hide Section' : 'Show Section'} 
-                        className={`p-2 rounded-md transition-colors ${section.isVisible ? 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900' : 'text-amber-600 hover:bg-amber-50 bg-amber-50/50'}`}
-                      >
-                        {section.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </button>
-                      
-                      <button onClick={() => handleEdit(section)} title="Edit Content" className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => deleteSection(section.id)} title="Delete Section" className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 className="w-4 h-4" /></button>
-                    </div>
+                    {/* 🟢 سمت راست: کنترلرهای مینیمال (Published / Unpublished) */}
+                      <div className="flex items-center gap-4">
+                        
+                        {/* ۱. سوئیچ کشویی مدرن برای پابلیش */}
+                        <div className="flex items-center gap-2" title={section.isPublished ? "Currently published on site" : "Unpublished (Hidden)"}>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider min-w-[85px] text-right ${section.isPublished ? 'text-emerald-600' : 'text-zinc-400'}`}>
+                            {section.isPublished ? 'Published' : 'Unpublished'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => togglePublish(section.id, section.isPublished)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${section.isPublished ? 'bg-zinc-900' : 'bg-zinc-200'}`}
+                          >
+                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${section.isPublished ? 'translate-x-4' : 'translate-x-0'}`} />
+                          </button>
+                        </div>
+
+                        <div className="w-px h-6 bg-zinc-200"></div>
+
+                        {/* ۲. دکمه‌های ثانویه (ویرایش، حذف) */}
+                        <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEdit(section)} title="Edit Content" className="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => deleteSection(section.id)} title="Delete Section" className="p-1.5 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                      </div>
                   </div>
                 );
               })

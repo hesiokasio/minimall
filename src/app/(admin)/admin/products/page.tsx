@@ -9,6 +9,11 @@ import {
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
 
+// 🟢 فراخوانی مودال از پوشه کامپوننت‌ها
+import AddProductModal from '../../../../components/modals/AddProductModal';
+// 🟢 فراخوانی کامپوننت صفحه‌بندی
+import TablePagination from '../../../../components/layout/TablePagination';
+
 const CATEGORIES = [
   'Apparel & Fashion',
   'Beauty & Personal Care',
@@ -29,7 +34,6 @@ export default function ProductsDirectoryPage() {
   const [stores, setStores] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Stats State
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -37,21 +41,18 @@ export default function ProductsDirectoryPage() {
     outOfStock: 0
   });
 
-  // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [storeFilter, setStoreFilter] = useState(preselectedStoreId || 'all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortOption, setSortOption] = useState('newest');
 
-  // Pagination State
+  // 🟢 استیت داینامیک برای تعداد آیتم در صفحه
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Fetch Data
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -89,12 +90,10 @@ export default function ProductsDirectoryPage() {
     fetchData();
   }, []);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, storeFilter, categoryFilter, sortOption]);
+  }, [searchQuery, statusFilter, storeFilter, categoryFilter, sortOption, itemsPerPage]);
 
-  // Actions
   const updateProductStatus = async (productId: string, newStatus: string) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
     if (!error) {
@@ -115,7 +114,6 @@ export default function ProductsDirectoryPage() {
     }
   };
 
-  // Filter and Sort Logic
   const filteredProducts = useMemo(() => {
     let result = products.filter((prod) => {
       const matchesSearch = 
@@ -144,7 +142,6 @@ export default function ProductsDirectoryPage() {
     }
   }, [products, searchQuery, statusFilter, storeFilter, categoryFilter, sortOption]);
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -163,7 +160,6 @@ export default function ProductsDirectoryPage() {
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-zinc-900 tracking-tight">
@@ -182,7 +178,6 @@ export default function ProductsDirectoryPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div 
           className="p-4 sm:p-5 bg-zinc-900 text-white rounded-xl shadow-sm cursor-pointer hover:bg-zinc-800 transition-colors"
@@ -216,7 +211,6 @@ export default function ProductsDirectoryPage() {
         </div>
       </div>
 
-      {/* Filters Toolbar */}
       <div className="bg-white border border-zinc-200/80 rounded-xl p-4 shadow-sm flex flex-col gap-4">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
           <div className="relative lg:col-span-2">
@@ -272,7 +266,6 @@ export default function ProductsDirectoryPage() {
           </div>
         </div>
 
-        {/* Row 2: Sort and Results Count */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
           <span className="text-[13px] text-zinc-500">
             Showing <strong className="text-zinc-900 font-semibold">{filteredProducts.length}</strong> of <strong className="text-zinc-900 font-semibold">{stats.total}</strong> products
@@ -295,7 +288,6 @@ export default function ProductsDirectoryPage() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div className="bg-white border border-zinc-200/80 rounded-xl shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
@@ -414,49 +406,16 @@ export default function ProductsDirectoryPage() {
           </table>
         </div>
 
-        {/* Table Footer with Pagination */}
-        <div className="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
-          <span>
-            Showing <strong className="text-zinc-900">{filteredProducts.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong className="text-zinc-900">{Math.min(currentPage * itemsPerPage, filteredProducts.length)}</strong> of <strong className="text-zinc-900">{filteredProducts.length}</strong> entries
-          </span>
-          
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            
-            <div className="flex items-center gap-1 px-2 font-medium hidden sm:flex">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                    currentPage === page 
-                      ? 'bg-zinc-900 text-white shadow-sm' 
-                      : 'text-zinc-600 hover:bg-zinc-200/50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        {/* 🟢 فقط فراخوانی کامپوننت فوتر */}
+        <TablePagination
+          totalItems={filteredProducts.length}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
 
-      {/* Add Product Modal */}
       {isAddModalOpen && (
         <AddProductModal 
           supabase={supabase} 
@@ -469,221 +428,6 @@ export default function ProductsDirectoryPage() {
         />
       )}
 
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------
-   ADD PRODUCT MODAL COMPONENT
---------------------------------------------------------- */
-function AddProductModal({ supabase, stores, onClose, onSuccess }: any) {
-  const [form, setForm] = useState({
-    name: '',
-    sku: '',
-    storeId: stores[0]?.id || '',
-    category: CATEGORIES[0],
-    price: '',
-    stock: 25,
-    status: 'active',
-    image: '',
-    description: '',
-  });
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim() || !form.price) return;
-    setSubmitting(true);
-
-    try {
-      let finalImageUrl = form.image;
-
-      if (uploadFile) {
-        const ext = uploadFile.name.split('.').pop();
-        const fileName = `prod-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('banners').upload(fileName, uploadFile);
-        if (!upErr) {
-          const { data } = supabase.storage.from('banners').getPublicUrl(fileName);
-          finalImageUrl = data.publicUrl;
-        }
-      }
-
-      const fullPayload: any = {
-        name: form.name,
-        sku: form.sku,
-        store_id: form.storeId || null,
-        category: form.category,
-        price: Number(form.price),
-        stock: Number(form.stock),
-        status: form.status,
-        image_url: finalImageUrl,
-        description: form.description,
-      };
-
-      const { error } = await supabase.from('products').insert([fullPayload]);
-      if (error) throw error;
-      onSuccess();
-    } catch (err: any) {
-      alert('Error adding product: ' + (err?.message || 'Database error'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-2xl border border-zinc-200 shadow-2xl overflow-hidden my-8">
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900">Add Catalog Product</h2>
-            <p className="text-[11px] text-zinc-500 mt-0.5">Register a new SKU and assign it to a tenant store.</p>
-          </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Product Name <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Lumina Reference Monitor"
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:border-zinc-900"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">SKU Code</label>
-              <input
-                type="text"
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase() })}
-                placeholder="PRM-001"
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Category</label>
-              <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Assigned Store <span className="text-rose-500">*</span></label>
-              <select
-                required
-                value={form.storeId}
-                onChange={(e) => setForm({ ...form, storeId: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                <option value="">Select Store...</option>
-                {stores.map((s: any) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Price <span className="text-rose-500">*</span></label>
-              <input
-                type="number"
-                required
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                placeholder="0.00"
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Stock Quantity</label>
-              <input
-                type="number"
-                min="0"
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Status</label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-white"
-              >
-                <option value="active">Active & Visible</option>
-                <option value="inactive">Hidden (Draft)</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2 space-y-2 pt-2">
-              <label className="block font-medium text-zinc-700">Product Image (Upload or URL)</label>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0 overflow-hidden">
-                  {(uploadFile || form.image) ? (
-                    <img src={uploadFile ? URL.createObjectURL(uploadFile) : form.image} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package className="w-5 h-5 text-zinc-400" />
-                  )}
-                </div>
-                <div className="flex-1 space-y-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                    className="w-full text-[11px] text-zinc-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-semibold file:bg-zinc-100 file:text-zinc-700 hover:file:bg-zinc-200 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={form.image}
-                    onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    placeholder="Or paste an image URL..."
-                    className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-zinc-700 mb-1">Product Description</label>
-              <textarea
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg"
-                placeholder="Product details, material, dimensions..."
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-zinc-100 flex items-center justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-zinc-200 font-medium text-zinc-700 hover:bg-zinc-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-zinc-900 text-white font-medium hover:bg-zinc-800 disabled:opacity-50 inline-flex items-center gap-1.5">
-              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {submitting ? 'Saving...' : 'Add Product'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }
