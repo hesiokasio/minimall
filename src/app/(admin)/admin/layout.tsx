@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Building2, Store, Package, ShoppingCart, CreditCard,
   LayoutTemplate, Image as ImageIcon, Search, Menu, X,
-  ChevronRight, ExternalLink, BarChart, Ticket
+  ChevronRight, ExternalLink, BarChart, Ticket, LogOut
 } from 'lucide-react';
 import { createClient } from '../../../utils/supabase/client';
 import '../../globals.css';
@@ -44,6 +44,28 @@ export default function AdminDashboardLayout({
   });
   const [counts, setCounts] = useState({ malls: 0, stores: 0, products: 0, sections: 0 });
 
+  // 🟢 ۱. بررسی لاگین بودن و داشتن نقش ادمین (قفل امنیتی پنل)
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace('/login/admin');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile?.role !== 'admin') {
+        router.replace('/login/admin');
+      }
+    };
+    checkAuth();
+  }, [router, supabase]);
+
   // دریافت شمارنده‌های زنده از دیتابیس
   useEffect(() => {
     async function fetchCounts() {
@@ -61,7 +83,7 @@ export default function AdminDashboardLayout({
       });
     }
     fetchCounts();
-  }, [pathname]);
+  }, [pathname, supabase]);
 
   // میانبر کیبورد Cmd+K / Ctrl+K
   useEffect(() => {
@@ -97,7 +119,7 @@ export default function AdminDashboardLayout({
       });
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, supabase]);
 
   const navGroups: NavGroup[] = [
     {
@@ -150,7 +172,6 @@ export default function AdminDashboardLayout({
     <html lang="en" dir="ltr">
       <body className="min-h-screen bg-[#FAFAFA] text-zinc-900 flex flex-col md:flex-row font-sans antialiased selection:bg-zinc-900 selection:text-white overflow-hidden">
         
-        {/* این کامپوننتی است که به تازگی جدا کردیم */}
         <AdminSidebar navGroups={navGroups} />
 
         {/* Main Content Shell */}
@@ -202,15 +223,25 @@ export default function AdminDashboardLayout({
                 <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
               </Link>
 
-              {/* Admin Profile Pill */}
-              <div className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg border border-zinc-200/60 bg-white">
+              {/* 🟢 ۲. پروفایل ادمین + دکمه خروج */}
+              <div className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-lg border border-zinc-200/60 bg-white">
                 <div className="w-7 h-7 rounded-full bg-zinc-900 text-white text-xs font-semibold flex items-center justify-center">
                   SA
                 </div>
-                <div className="hidden sm:block text-left">
+                <div className="hidden sm:block text-left mr-1">
                   <div className="text-xs font-medium text-zinc-900 leading-none">Super Admin</div>
                   <div className="text-[10px] text-zinc-500 mt-0.5">Administrator</div>
                 </div>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    router.replace('/login/admin');
+                  }}
+                  title="Sign Out"
+                  className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
 
             </div>

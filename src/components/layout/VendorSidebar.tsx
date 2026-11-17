@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   Package,
@@ -32,6 +32,7 @@ type NavGroup = {
 export default function VendorSidebar() {
   const supabase = createClient();
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // استیت‌های داینامیک برای نام فروشگاه و ایمیل کاربر
@@ -82,7 +83,7 @@ export default function VendorSidebar() {
   // تابع خروج از حساب کاربری
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    router.replace('/login/vendor'); // <-- تغییر به آدرس جدید
   };
 
   const navGroups: NavGroup[] = [

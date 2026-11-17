@@ -43,6 +43,8 @@ export default function TablePagination({
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
 
+  if (totalItems === 0) return null;
+  
   return (
     <div className="px-5 py-3.5 border-t border-zinc-200/80 bg-zinc-50/40 flex flex-col sm:flex-row items-center justify-between gap-4">
       

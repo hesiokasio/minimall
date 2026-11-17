@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import VendorSidebar from '../../components/layout/VendorSidebar';
-import { Search, ExternalLink, ChevronRight, Menu, AlertCircle } from 'lucide-react';
+import { Search, ExternalLink, ChevronRight, Menu, AlertCircle, LogOut } from 'lucide-react';
 import '../globals.css';
 import { createClient } from '../../utils/supabase/client'; // نکته: اگر مسیر کلاینت سوپابیس شما فرق دارد، این خط را اصلاح کنید
 
@@ -14,6 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient();
   
   // استیت برای نگهداری وضعیت اشتراک (null یعنی در حال بررسی)
@@ -22,25 +23,31 @@ export default function DashboardLayout({
   useEffect(() => {
     const checkSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // جستجو در جدول اشتراک‌ها برای پیدا کردن اشتراک فعال این کاربر
-        const { data } = await supabase
-          .from('subscriptions')
-          .select('status')
-          .eq('vendor_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
+      
+      // ۱. اضافه کردن این شرط: اگر کاربر لاگین نبود، به صفحه لاگین فروشندگان هدایت شود
+      if (!user) {
+        router.replace('/login/vendor');
+        return; // توقف اجرای بقیه تابع
+      }
 
-        if (data) {
-          setIsSubscribed(true); // اشتراک فعال دارد
-        } else {
-          setIsSubscribed(false); // اشتراک ندارد
-        }
+      // ۲. حالا که مطمئنیم کاربر لاگین است، اشتراکش را چک می‌کنیم (کد قبلی خودتان بدون نیاز به if(user))
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('vendor_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (data) {
+        setIsSubscribed(true);
+      } else {
+        setIsSubscribed(false);
       }
     };
 
     checkSubscription();
-  }, []);
+  }, [router, supabase]);
+
 
   const getBreadcrumbTitle = () => {
     if (!pathname || pathname === '/dashboard') return 'Overview';
@@ -113,6 +120,16 @@ export default function DashboardLayout({
                     <div className="text-xs font-medium text-zinc-900 leading-none">Vendor Shop</div>
                     <div className="text-[10px] text-zinc-500 mt-0.5">Verified Partner</div>
                   </div>
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut(); // خروج از سوپابیس
+                      router.replace('/login/vendor'); // هدایت به لاگین فروشنده
+                    }}
+                    title="Sign Out"
+                    className="p-1.5 ml-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </header>

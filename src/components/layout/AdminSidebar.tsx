@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ChevronRight, ChevronLeft, Database } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ChevronRight, ChevronLeft, LogOut } from 'lucide-react';
+import { createClient } from '../../utils/supabase/client';
 
 interface AdminSidebarProps {
   navGroups: any[];
@@ -11,8 +12,26 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ navGroups }: AdminSidebarProps) {
   const pathname = usePathname();
-  // وضعیت باز و بسته بودن منو را به داخل همین فایل منتقل کردیم
+  const router = useRouter();
+  const supabase = createClient();
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string>('Loading...');
+
+  useEffect(() => {
+    const getAdminUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setAdminEmail(user.email);
+      }
+    };
+    getAdminUser();
+  }, [supabase]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace('/login/admin');
+  };
 
   const isActiveLink = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
@@ -87,22 +106,38 @@ export default function AdminSidebar({ navGroups }: AdminSidebarProps) {
         ))}
       </nav>
 
-      {/* Database Status & Collapse Button */}
-      <div className="p-2.5 border-t border-zinc-200/70 space-y-2">
-        {!sidebarCollapsed && (
-          <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200/60">
-            <div className="flex items-center justify-between text-[11px] font-medium text-zinc-700">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Supabase Connected
-              </span>
-              <Database className="w-3.5 h-3.5 text-zinc-400" />
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-1 leading-normal">
-              Live database sync active across storefront.
-            </p>
+      {/* Admin Profile Card, Sign Out & Collapse Button */}
+      <div className="p-3 border-t border-zinc-200/70 space-y-2">
+        <div
+          className={`flex items-center gap-3 p-2.5 rounded-xl bg-zinc-50/80 border border-zinc-200/60 ${
+            sidebarCollapsed ? 'justify-center' : ''
+          }`}
+        >
+          <div className="w-8 h-8 rounded-full bg-zinc-900 text-white text-xs font-bold flex items-center justify-center shrink-0 uppercase">
+            {adminEmail !== 'Loading...' ? adminEmail.substring(0, 2) : 'SA'}
           </div>
-        )}
+          {!sidebarCollapsed && (
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-zinc-900 truncate">
+                Super Admin
+              </div>
+              <div className="text-[11px] text-zinc-500 truncate mt-0.5">
+                {adminEmail}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={handleSignOut}
+          title={sidebarCollapsed ? 'Sign Out' : undefined}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer ${
+            sidebarCollapsed ? 'justify-center' : ''
+          }`}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!sidebarCollapsed && <span>Sign Out</span>}
+        </button>
 
         <button
           suppressHydrationWarning

@@ -10,11 +10,10 @@ import {
   Truck, 
   CheckCircle2, 
   XCircle,
-  Loader2,
-  ChevronLeft,
-  ChevronRight
+  Loader2
 } from 'lucide-react';
 import { createClient } from '../../../../utils/supabase/client';
+import TablePagination from '../../../../components/layout/TablePagination';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const configs: Record<string, any> = {
@@ -44,48 +43,59 @@ export default function SellerOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, itemsPerPage]);
+
   const fetchOrders = async () => {
     setIsLoading(true);
-    
-    // ۱. گرفتن یوزر فعلی
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
 
-    // ۲. پیدا کردن فروشگاهِ اختصاصی همین یوزر
-    const { data: storeData } = await supabase
-      .from('stores')
-      .select('id')
-      .eq('owner_id', user.id) // 🟢 فیلتر امنیتی: فقط فروشگاه من
-      .limit(1)
-      .maybeSingle();
-    
-    if (storeData) {
-      // ۳. سفارشات مربوط به این فروشگاه را می‌خوانیم
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('store_id', storeData.id)
-        .order('created_at', { ascending: false });
+      if (!user) {
+        setOrders([]);
+        return;
+      }
 
-      if (data) setOrders(data);
-      if (error) console.error('Error fetching orders:', error.message, error.code, error.hint);
-    } else {
-      setOrders([]); // اگر فروشگاهی پیدا نشد، لیست سفارشات خالی بماند
+      const { data: storeData, error: storeError } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (storeError) {
+        console.error('Error fetching store:', storeError.message);
+      }
+      
+      if (storeData) {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('store_id', storeData.id)
+          .order('created_at', { ascending: false });
+
+        if (data) setOrders(data);
+        if (error) console.error('Error fetching orders:', error.message);
+      } else {
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
-  // تابع تغییر وضعیت سفارش
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     const originalOrders = [...orders];
-    // آپدیت سریع در ظاهر سایت (Optimistic UI)
     setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
 
     const { error } = await supabase
@@ -95,21 +105,22 @@ export default function SellerOrdersPage() {
 
     if (error) {
       alert('خطا در بروزرسانی وضعیت سفارش');
-      setOrders(originalOrders); // برگرداندن به حالت قبل در صورت ارور
+      setOrders(originalOrders);
     }
   };
 
   const filteredOrders = orders.filter(o => {
-    const matchesSearch = o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          o.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = 
+      (o.order_number?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+      (o.customer_name?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const totalItems = filteredOrders.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+  const currentOrders = filteredOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
@@ -151,25 +162,11 @@ export default function SellerOrdersPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-zinc-200/80 rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[400px]">
+      <div className="bg-white border border-zinc-200/80 rounded-xl overflow-hidden shadow-sm flex flex-col">
         {isLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[360px]">
             <Loader2 className="w-8 h-8 text-zinc-400 animate-spin mb-3" />
             <p className="text-xs font-medium text-zinc-500">Loading orders from database...</p>
-          </div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="p-12 text-center flex flex-col items-center justify-center h-full">
-            <ShoppingBag className="w-10 h-10 text-zinc-300 mb-3" />
-            <h3 className="text-sm font-semibold text-zinc-900">No orders found</h3>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm">When customers place orders, they will appear here.</p>
-            {searchQuery || statusFilter !== 'all' ? (
-              <button 
-                onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
-                className="mt-4 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-medium rounded-lg transition-colors"
-              >
-                Clear Filters
-              </button>
-            ) : null}
           </div>
         ) : (
           <>
@@ -186,62 +183,72 @@ export default function SellerOrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 text-xs">
-                  {currentOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-zinc-50/80 transition-colors group">
-                      <td className="py-4 px-5">
-                        <span className="font-mono font-semibold text-zinc-900">{order.order_number}</span>
-                      </td>
-                      <td className="py-4 px-5 text-zinc-500">
-                        {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className="font-semibold text-zinc-900">{order.customer_name}</div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5">{order.customer_phone || 'No phone'}</div>
-                      </td>
-                      <td className="py-4 px-5 font-semibold text-zinc-900 tabular-nums">
-                        {Number(order.total_price).toLocaleString()} تومان
-                      </td>
-                      <td className="py-4 px-5">
-                        <StatusBadge status={order.status} />
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <select 
-                          value={order.status}
-                          onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
-                          className="bg-white border border-zinc-200 text-zinc-700 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-zinc-400 cursor-pointer shadow-2xs"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                        <button className="ml-2 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors inline-flex align-middle" title="View Details">
-                          <Eye className="w-4 h-4" />
-                        </button>
+                  {currentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 px-5 text-center">
+                        <ShoppingBag className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
+                        <h3 className="text-sm font-semibold text-zinc-900">No orders found</h3>
+                        <p className="text-xs text-zinc-500 mt-1">When customers place orders, they will appear here.</p>
+                        {(searchQuery || statusFilter !== 'all') && (
+                          <button 
+                            onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                            className="mt-4 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-medium rounded-lg transition-colors"
+                          >
+                            Clear Filters
+                          </button>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    currentOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-zinc-50/80 transition-colors group">
+                        <td className="py-4 px-5">
+                          <span className="font-mono font-semibold text-zinc-900">{order.order_number}</span>
+                        </td>
+                        <td className="py-4 px-5 text-zinc-500">
+                          {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className="font-semibold text-zinc-900">{order.customer_name}</div>
+                          <div className="text-[10px] text-zinc-500 mt-0.5">{order.customer_phone || 'No phone'}</div>
+                        </td>
+                        <td className="py-4 px-5 font-semibold text-zinc-900 tabular-nums">
+                          {Number(order.total_price).toLocaleString()} تومان
+                        </td>
+                        <td className="py-4 px-5">
+                          <StatusBadge status={order.status} />
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <select 
+                            value={order.status}
+                            onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                            className="bg-white border border-zinc-200 text-zinc-700 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-zinc-400 cursor-pointer shadow-2xs"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                          <button className="ml-2 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors inline-flex align-middle" title="View Details">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="px-5 py-3 border-t border-zinc-200/80 bg-zinc-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-auto">
-                <div className="text-xs text-zinc-500">
-                  Showing <span className="font-medium text-zinc-900">{startIndex + 1}</span> to <span className="font-medium text-zinc-900">{Math.min(startIndex + itemsPerPage, totalItems)}</span> of <span className="font-medium text-zinc-900">{totalItems}</span> orders
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors bg-white shadow-2xs">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-xs font-medium text-zinc-700 px-2">Page {currentPage} of {totalPages}</span>
-                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors bg-white shadow-2xs">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* 🟢 حالا TablePagination بیرون از شرط خالی بودن است و همیشه زیر جدول نمایش داده می‌شود */}
+            <TablePagination
+              totalItems={filteredOrders.length}
+              currentPage={currentPage}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+            />
           </>
         )}
       </div>
