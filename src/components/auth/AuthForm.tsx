@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, Store, UserPlus, LogIn } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, Store, User, UserPlus, LogIn } from 'lucide-react';
 import { createClient } from '../../utils/supabase/client';
 
 interface AuthFormProps {
@@ -34,14 +34,20 @@ export default function AuthForm({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const RoleIcon = role === 'admin' ? ShieldCheck : Store;
-  const roleLabel = role === 'admin' ? 'Admin' : 'Vendor';
+  const RoleIcon = role === 'admin' ? ShieldCheck : role === 'vendor' ? Store : User;
+  const roleLabel = role === 'admin' ? 'Admin' : role === 'vendor' ? 'Vendor' : 'Customer';
 
   // بررسی سشن و نقش کاربر در صورت لاگین بودن از قبل
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // اگر صفحه لاگین مشتری (ویترین سایت) است و کاربر از قبل لاگین است، مستقیم هدایتش کن
+        if (role === 'customer') {
+          router.replace(redirectPath);
+          return;
+        }
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -68,7 +74,7 @@ export default function AuthForm({
           email,
           password,
           options: {
-            data: { role }, // ثبت خودکار نقش (admin یا vendor)
+            data: { role }, // ثبت خودکار نقش (admin، vendor یا customer)
           },
         });
 
@@ -90,15 +96,18 @@ export default function AuthForm({
         if (signInError) throw signInError;
 
         if (data.session) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.session.user.id)
-            .single();
+          // فقط برای پنل ادمین و فروشنده نقش را سخت‌گیرانه چک کن
+          if (role === 'admin' || role === 'vendor') {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', data.session.user.id)
+              .single();
 
-          if (profile?.role !== role) {
-            await supabase.auth.signOut();
-            throw new Error(`عدم دسترسی: این اکانت مجوز ورود به پنل ${roleLabel} را ندارد.`);
+            if (profile?.role !== role) {
+              await supabase.auth.signOut();
+              throw new Error(`عدم دسترسی: این اکانت مجوز ورود به پنل ${roleLabel} را ندارد.`);
+            }
           }
 
           router.push(redirectPath);
@@ -138,7 +147,7 @@ export default function AuthForm({
             <button
               type="button"
               onClick={() => { setMode('login'); setError(null); setSuccessMsg(null); }}
-              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 mode === 'login' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-900'
               }`}
             >
@@ -148,7 +157,7 @@ export default function AuthForm({
             <button
               type="button"
               onClick={() => { setMode('signup'); setError(null); setSuccessMsg(null); }}
-              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 mode === 'signup' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-900'
               }`}
             >
@@ -212,17 +221,17 @@ export default function AuthForm({
             <button
               type="submit"
               disabled={isLoading || !email || !password}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : mode === 'login' ? (
                 <>
-                  Sign in to Workspace <ArrowRight className="w-4 h-4" />
+                  {role === 'customer' ? 'Sign In' : 'Sign in to Workspace'} <ArrowRight className="w-4 h-4" />
                 </>
               ) : (
                 <>
-                  Register & Enter {roleLabel} <ArrowRight className="w-4 h-4" />
+                  Register & Enter <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
