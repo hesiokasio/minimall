@@ -84,6 +84,8 @@ export default function MallInterior({ params }: { params: Promise<{ id: string 
                   id: p.id,
                   name: p.name,
                   price: p.price,
+                  discount_percent: p.discount_percent || 0, // <-- اضافه شد
+                  discount_price: p.discount_price || null,  // <-- اضافه شد
                   image: (p.images && p.images.length > 0) ? p.images[0] : (p.image_url || p.image)
                 }))
             }));

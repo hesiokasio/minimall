@@ -5,7 +5,6 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { ChevronDown, Search, MapPin, Grid2X2, Building2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-
 import Container from '../layout/Container';
 import { CITIES, NEIGHBORHOODS, CATEGORIES } from '../../data/mockData'; // MALL_DIRECTORY حذف شد
 import { createClient } from '../../utils/supabase/client'; // 🔴 اتصال به دیتابیس اضافه شد
@@ -58,8 +57,7 @@ export default function Hero() {
         .from('malls')
         .select(`
           *,
-          stores:stores(count),
-          products:products(count)
+          stores(id, products(id))
         `)
         .order('created_at', { ascending: false });
         
@@ -67,7 +65,25 @@ export default function Hero() {
         console.error("Supabase Error:", error.message);
       }
         
-      if (data) setMalls(data);
+      if (data) {
+        // محاسبه دقیق تعداد فروشگاه‌ها و کل محصولاتِ موجود در هر پاساژ
+        const formattedMalls = data.map((mall: any) => {
+          const storesList = Array.isArray(mall.stores) ? mall.stores : [];
+          const storesCount = storesList.length;
+          const productsCount = storesList.reduce(
+            (sum: number, store: any) => sum + (Array.isArray(store.products) ? store.products.length : 0),
+            0
+          );
+
+          return {
+            ...mall,
+            stores: [{ count: storesCount }],
+            products: [{ count: productsCount }],
+          };
+        });
+
+        setMalls(formattedMalls);
+      }
       setIsLoading(false);
     }
     fetchMalls();
@@ -202,13 +218,17 @@ export default function Hero() {
                     <Link href={`/mall/${mall.id}`} className="w-full flex flex-col items-center cursor-pointer">
                       
                       <div className="relative w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-[1.25rem] md:rounded-[1.75rem] bg-gray-100 shadow-sm border border-black/5 group-hover:shadow-[0_15px_30px_-5px_rgba(0,0,0,0.15)] group-hover:-translate-y-2 transition-all duration-400 overflow-hidden mb-3">
-                        <Image 
-                          src={mall.cover_image || 'https://images.unsplash.com/photo-1519567241046-7f154a434c4b?q=80&w=500'} // 🔴 مپینگ عکس از دیتابیس با فال‌بک
-                          alt={mall.name} 
-                          fill
-                          sizes="100px" 
-                          className="object-cover transition-transform duration-700 group-hover:scale-110 will-change-transform transform-gpu" 
-                        />
+                        {(mall.image_url || mall.cover_image) ? (
+                          <img 
+                            src={mall.image_url || mall.cover_image} 
+                            alt={mall.name} 
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 will-change-transform transform-gpu" 
+                          />
+                          ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-[#EAE8E3] text-black/25 group-hover:text-black/40 transition-colors duration-500">
+                            <Building2 size={28} strokeWidth={1.5} />
+                          </div>
+                          )}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
                       </div>
 

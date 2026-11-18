@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { X, UploadCloud, Image as ImageIcon, Trash2, Loader2 } from 'lucide-react';
-import { createClient } from '../../utils/supabase/client'; // مسیر اتصال به دیتابیس
+import React, { useState, useRef, useEffect } from 'react';
+import { X, UploadCloud, Trash2, Loader2 } from 'lucide-react';
+import { createClient } from '../../utils/supabase/client';
 
 interface SellerProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (product: any) => void;
+  initialData?: any;
 }
 
 const CATEGORIES = [
@@ -17,7 +18,7 @@ const CATEGORIES = [
   'Beauty & Personal Care'
 ];
 
-export default function SellerProductModal({ isOpen, onClose, onSave }: SellerProductModalProps) {
+export default function SellerProductModal({ isOpen, onClose, onSave, initialData }: SellerProductModalProps) {
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -28,13 +29,50 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
     sku: '',
     category: CATEGORIES[0],
     price: '',
+    discount_percent: '',
     stock: 25,
     size: '',
     color: '',
+    description: '',
   });
   
-  // حالا هم فایل واقعی و هم پیش‌نمایش را ذخیره می‌کنیم
-  const [images, setImages] = useState<{file: File, preview: string}[]>([]);
+  const [images, setImages] = useState<{file?: File, preview: string}[]>([]);
+
+  // اگر فروشنده روی دکمه ویرایش (Edit) کلیک کرده باشد، اطلاعات محصول در فرم پر می‌شود
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setForm({
+        name: initialData.name || '',
+        sku: initialData.sku || '',
+        category: initialData.category || CATEGORIES[0],
+        price: initialData.price !== undefined ? String(initialData.price) : '',
+        discount_percent: initialData.discount_percent ? String(initialData.discount_percent) : '',
+        stock: initialData.stock !== undefined ? Number(initialData.stock) : 25,
+        size: initialData.size || '',
+        color: initialData.color || '',
+        description: initialData.description || '',
+      });
+
+      if (Array.isArray(initialData.images) && initialData.images.length > 0) {
+        setImages(initialData.images.map((url: string) => ({ preview: url })));
+      } else {
+        setImages([]);
+      }
+    } else if (!initialData && isOpen) {
+      setForm({
+        name: '',
+        sku: '',
+        category: CATEGORIES[0],
+        price: '',
+        discount_percent: '',
+        stock: 25,
+        size: '',
+        color: '',
+        description: '',
+      });
+      setImages([]);
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,40 +97,53 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
     try {
       let finalImageUrl = '';
 
-      // اگر عکسی انتخاب شده بود، اول آن را در سوپابیس آپلود می‌کنیم
       if (images.length > 0) {
-        const file = images[0].file;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        if (images[0].file) {
+          // اگر عکس جدید از کامپیوتر انتخاب شده باشد، در سوپابیس آپلود می‌شود
+          const file = images[0].file;
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-        // آپلود در باکت products
-        const { error: uploadError } = await supabase.storage
-          .from('products')
-          .upload(fileName, file);
+          const { error: uploadError } = await supabase.storage
+            .from('products')
+            .upload(fileName, file);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        // دریافت لینک دائمی پابلیک
-        const { data: urlData } = supabase.storage.from('products').getPublicUrl(fileName);
-        finalImageUrl = urlData.publicUrl;
+          const { data: urlData } = supabase.storage.from('products').getPublicUrl(fileName);
+          finalImageUrl = urlData.publicUrl;
+        } else {
+          // اگر در حالت ویرایش باشیم و عکس قبلی دست‌نخورده باشد
+          finalImageUrl = images[0].preview;
+        }
       }
 
-      // ارسال اطلاعات به کامپوننت پدر به همراه لینک دائمی عکس
       onSave({
-        id: `PRD-${Date.now().toString().slice(-4)}`,
+        id: initialData?.id || `PRD-${Date.now().toString().slice(-4)}`,
         name: form.name,
         sku: form.sku.toUpperCase(),
         category: form.category,
         price: Number(form.price) || 0,
+        discount_percent: Number(form.discount_percent) || 0,
         stock: Number(form.stock),
         size: form.size,
         color: form.color,
+        description: form.description,
         status: targetStatus,
-        image: finalImageUrl // اینجا لینک واقعی اینترنتی ارسال می‌شود
+        image: finalImageUrl
       });
       
-      // پاک کردن فرم بعد از موفقیت
-      setForm({ name: '', sku: '', category: CATEGORIES[0], price: '', stock: 25, size: '', color: '' });
+      setForm({
+        name: '',
+        sku: '',
+        category: CATEGORIES[0],
+        price: '',
+        discount_percent: '',
+        stock: 25,
+        size: '',
+        color: '',
+        description: '',
+      });
       setImages([]);
     } catch (error: any) {
       alert('Error uploading image: ' + error.message);
@@ -103,13 +154,22 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
 
   const inputClass = "w-full h-[38px] px-3 border border-zinc-200 rounded-lg focus:border-zinc-900 focus:outline-none transition-colors";
 
+  // محاسبه لحظه‌ای قیمت پس از تخفیف برای نمایش زیر اینپوت
+  const numericPrice = Number(form.price) || 0;
+  const numericDiscount = Math.min(99, Math.max(0, Number(form.discount_percent) || 0));
+  const discountedPreviewPrice = numericDiscount > 0 
+    ? Math.round(numericPrice * (1 - numericDiscount / 100)) 
+    : numericPrice;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-2xl bg-white rounded-2xl border border-zinc-200 shadow-xl overflow-hidden my-8">
         
         <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-zinc-900">Add Catalog Product</h2>
-          <button onClick={onClose} disabled={isUploading} className="text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-50">
+          <h2 className="text-base font-semibold text-zinc-900">
+            {initialData ? 'Edit Product & Discount' : 'Add Catalog Product'}
+          </h2>
+          <button onClick={onClose} disabled={isUploading} className="text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-50 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -150,25 +210,46 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
               </select>
             </div>
 
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Price (Toman) *</label>
-              <input
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                className={inputClass}
-                placeholder="e.g. 145000"
-              />
-            </div>
+            {/* ردیف ۳ ستونی: قیمت اصلی، درصد تخفیف، و موجودی انبار */}
+            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block font-medium text-zinc-700 mb-1">Price (Toman) *</label>
+                <input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  className={inputClass}
+                  placeholder="e.g. 145000"
+                />
+              </div>
 
-            <div>
-              <label className="block font-medium text-zinc-700 mb-1">Stock Quantity</label>
-              <input
-                type="number"
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                className={inputClass}
-              />
+              <div>
+                <label className="block font-medium text-zinc-700 mb-1">Discount (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={form.discount_percent}
+                  onChange={(e) => setForm({ ...form, discount_percent: e.target.value })}
+                  className={inputClass}
+                  placeholder="e.g. 20 (Optional)"
+                />
+                {numericPrice > 0 && numericDiscount > 0 && (
+                  <span className="block text-[10px] text-rose-600 font-semibold mt-1">
+                    Final: {discountedPreviewPrice.toLocaleString()} Toman (-{numericDiscount}%)
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-medium text-zinc-700 mb-1">Stock Quantity</label>
+                <input
+                  type="number"
+                  value={form.stock}
+                  onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                  className={inputClass}
+                />
+              </div>
             </div>
 
             <div>
@@ -184,6 +265,16 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
 
             <div>
               <label className="block font-medium text-zinc-700 mb-1">Color / Finish</label>
+              <div className="sm:col-span-2">
+              <label className="block font-medium text-zinc-700 mb-1">Product Description</label>
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full p-3 border border-zinc-200 rounded-lg focus:border-zinc-900 focus:outline-none transition-colors resize-none"
+                placeholder="Write product details and specifications..."
+              />
+            </div>
               <input
                 type="text"
                 value={form.color}
@@ -225,7 +316,7 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
                       type="button" 
                       onClick={() => !isUploading && removeImage(index)}
                       disabled={isUploading}
-                      className="p-1.5 bg-white/20 hover:bg-rose-500 text-white rounded text-[10px] backdrop-blur-sm transition-colors disabled:opacity-50"
+                      className="p-1.5 bg-white/20 hover:bg-rose-500 text-white rounded text-[10px] backdrop-blur-sm transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -240,7 +331,7 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
               type="button"
               onClick={onClose}
               disabled={isUploading}
-              className="px-4 py-2 rounded-lg border border-zinc-200 font-medium text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-lg border border-zinc-200 font-medium text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
@@ -248,7 +339,7 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
               type="button"
               onClick={(e) => handleSubmit(e, 'draft')}
               disabled={isUploading}
-              className="px-4 py-2 rounded-lg border border-zinc-300 font-medium text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-lg border border-zinc-300 font-medium text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 cursor-pointer"
             >
               Save as Draft
             </button>
@@ -256,10 +347,10 @@ export default function SellerProductModal({ isOpen, onClose, onSave }: SellerPr
               type="button"
               onClick={(e) => handleSubmit(e, 'active')}
               disabled={isUploading}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 text-white font-medium hover:bg-zinc-800 transition-colors disabled:opacity-70 min-w-[130px]"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 text-white font-medium hover:bg-zinc-800 transition-colors disabled:opacity-70 min-w-[130px] cursor-pointer"
             >
               {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              <span>{isUploading ? 'Uploading...' : 'Publish Product'}</span>
+              <span>{isUploading ? 'Saving...' : initialData ? 'Save Changes' : 'Publish Product'}</span>
             </button>
           </div>
         </form>
